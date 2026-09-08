@@ -14,23 +14,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Tailwind CSS 4** with PostCSS
 - **ESLint 9** with Next.js config (web vitals + TypeScript)
 
-## Development Commands
-
-```bash
-# Start development server (watches for changes, rebuilds automatically)
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linter
-npm run lint
-```
-
-After `npm run dev`, the app runs at `http://localhost:3000`.
 
 ## Project Structure
 
@@ -99,6 +82,7 @@ Config loads Next.js web-vitals and TypeScript rules from `eslint-config-next`. 
 - Home page metadata in `app/layout.tsx` (title, description)
 - Build output goes to `.next/` (git-ignored)
 - Static assets served from `public/`
+- Always use /frontend-design to design the user interface.
 
 ## Common Tasks
 
