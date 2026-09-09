@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 /* ===== ARCADE VAULT — theme ===== */
 :root {
@@ -18,8 +17,8 @@
   --bronze: #d97a3a;
   --line: rgba(0, 245, 255, 0.18);
   --line-2: rgba(255, 255, 255, 0.06);
-  --pixel: "Press Start 2P", system-ui, monospace;
-  --mono: "JetBrains Mono", "Courier Prime", "Courier New", monospace;
+  --pixel: var(--font-press-start-2p), system-ui, monospace;
+  --mono: var(--font-jetbrains-mono), "Courier Prime", "Courier New", monospace;
 }
 
 * { box-sizing: border-box; }
