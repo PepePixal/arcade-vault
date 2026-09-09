@@ -1,6 +1,6 @@
 # SPEC 01 — MVP visual de Arcade Vault (pantallas sin lógica de juego)
 
-> **Status:** Aprobado
+> **Status:** Completado
 > **Depends on:** —
 > **Date:** 2026-09-08
 > **Objective:** Migrar las 5 pantallas del template de referencia (Biblioteca, Detalle, Reproductor, Auth, Salón de la Fama) a rutas reales de Next.js App Router, con el tema visual neón/CRT portado y sin ninguna lógica de juego.
@@ -81,19 +81,19 @@ export function seededScores(seed: number, count?: number): ScoreRow[] { /* mism
 
 ## Acceptance criteria
 
-- [ ] `npm run dev` levanta la app sin errores en consola.
-- [ ] `/` muestra la grilla de los 8 juegos con card, badge de categoría y mejor puntuación.
-- [ ] Click en una card o en su botón JUGAR navega a `/juego/[id]` con el `id` correcto.
-- [ ] `/juego/[id]` muestra info del juego y un leaderboard de 10 filas generado por `seededScores`.
-- [ ] Botón "JUGAR AHORA" en Detalle navega a `/juego/[id]/jugar`.
-- [ ] `/juego/[id]/jugar` muestra el HUD (jugador, puntuación, vidas, nivel) con valores fijos; el puntaje no cambia solo con el tiempo.
-- [ ] Botón "SALIR" en Reproductor vuelve a `/juego/[id]`.
-- [ ] `/auth` muestra el formulario con tabs "Iniciar sesión" / "Crear cuenta"; el click en cada tab cambia el contenido visible.
-- [ ] `/salon-de-la-fama` muestra podio (top 3) y tabla completa con `seededScores` del primer juego.
-- [ ] El menú hamburguesa en mobile abre y cierra el panel lateral.
-- [ ] Los links del Nav (Biblioteca, Salón de la Fama) navegan a sus rutas correspondientes.
-- [ ] `npm run lint` pasa sin errores.
-- [ ] `npx tsc --noEmit` pasa sin errores.
+- [x] `npm run dev` levanta la app sin errores en consola.
+- [x] `/` muestra la grilla de los 8 juegos con card, badge de categoría y mejor puntuación.
+- [x] Click en una card o en su botón JUGAR navega a `/juego/[id]` con el `id` correcto.
+- [x] `/juego/[id]` muestra info del juego y un leaderboard de 10 filas generado por `seededScores`.
+- [x] Botón "JUGAR AHORA" en Detalle navega a `/juego/[id]/jugar`.
+- [x] `/juego/[id]/jugar` muestra el HUD (jugador, puntuación, vidas, nivel) con valores fijos; el puntaje no cambia solo con el tiempo.
+- [x] Botón "SALIR" en Reproductor vuelve a `/juego/[id]`.
+- [x] `/auth` muestra el formulario con tabs "Iniciar sesión" / "Crear cuenta"; el click en cada tab cambia el contenido visible.
+- [x] `/salon-de-la-fama` muestra podio (top 3) y tabla completa con `seededScores` del primer juego.
+- [x] El menú hamburguesa en mobile abre y cierra el panel lateral.
+- [x] Los links del Nav (Biblioteca, Salón de la Fama) navegan a sus rutas correspondientes.
+- [x] `npm run lint` pasa sin errores.
+- [x] `npx tsc --noEmit` pasa sin errores.
 
 ## Decisions
 
