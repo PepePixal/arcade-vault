@@ -1,6 +1,6 @@
 # SPEC 02 — Home (landing)
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-09
 > **Objective:** Portar la pantalla Home (landing con hero, features, preview de juegos, stats, actividad y precios) desde `references/templates/home-about/home.jsx`, reubicando la Biblioteca de `/` a `/juego` y actualizando el Nav.
