@@ -171,7 +171,7 @@ export default function AcercaDe() {
             <div className="kicker pixel neon-cyan">▸ CONTACTO</div>
             <h2 className="contact-title">CONTÁCTANOS</h2>
             <p className="contact-sub">
-              ¿Tienes alguna sugerencia, quieres proponer un juego, o simplemente quires saludar? Escríbenos.
+              ¿Tienes alguna sugerencia, quieres proponer un juego, o simplemente quieres saludar? Escríbenos.
             </p>
             <div className="contact-tips">
               <div className="tip">
@@ -232,7 +232,7 @@ export default function AcercaDe() {
                 </div>
                 <div className="term-body">
                   <div className="line">
-                    <span className="prompt">vault@arcade:~$</span> ./send_message --to=team
+                    <span className="prompt">Envio de mensaje</span>
                   </div>
                   <div className="line dim">[OK] Conectando con servidor…</div>
                   <div className="line dim">[OK] Validando contenido…</div>

@@ -1,6 +1,6 @@
 # SPEC 03 — Acerca de + Formulario de contacto
 
-> **Status:** Aprobado
+> **Status:** Completado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-09-10
 > **Objective:** Portar la pantalla "Acerca de" (misión, highlights, divisor animado) e implementar el formulario de contacto con envío real de correo vía Resend, desde `references/templates/home-about/about.jsx`.
