@@ -68,18 +68,18 @@ export const TOP_PLAYERS_TODAY: TopPlayerEntry[] = [ /* mismas 5 filas del templ
 
 ## Acceptance criteria
 
-- [ ] `/` muestra la Home (hero, features, preview de juegos, stats, actividad, pricing, CTA final), no la Biblioteca.
-- [ ] `/juego` muestra la grilla completa de los 8 juegos (contenido que antes estaba en `/`), con buscador y chips visibles (sin filtrar, igual que SPEC 01).
-- [ ] Click en una mini-card de Home navega a `/juego/[id]` con el `id` correcto.
-- [ ] Botón "VER TODOS LOS JUEGOS" y CTA final de Home navegan a `/juego`.
-- [ ] Botones "CREAR CUENTA" y "EMPEZAR GRATIS" de Home navegan a `/auth`.
-- [ ] Link "VER SALÓN →" en la sección de actividad navega a `/salon-de-la-fama`.
-- [ ] Las secciones de Home aparecen con animación reveal al hacer scroll (clase `.in` se agrega al entrar en viewport).
-- [ ] El Nav muestra los links Inicio, Biblioteca, Salón de la Fama (sin "Acerca de"), en desktop y en el panel mobile.
-- [ ] El link "Biblioteca" del Nav apunta a `/juego` y se marca activo en `/juego` y en `/juego/[id]`.
-- [ ] El logo del Nav navega a `/` (Home).
-- [ ] `npm run lint` pasa sin errores.
-- [ ] `npx tsc --noEmit` pasa sin errores.
+- [x] `/` muestra la Home (hero, features, preview de juegos, stats, actividad, pricing, CTA final), no la Biblioteca.
+- [x] `/juego` muestra la grilla completa de los 8 juegos (contenido que antes estaba en `/`), con buscador y chips visibles (sin filtrar, igual que SPEC 01).
+- [x] Click en una mini-card de Home navega a `/juego/[id]` con el `id` correcto.
+- [x] Botón "VER TODOS LOS JUEGOS" y CTA final de Home navegan a `/juego`.
+- [x] Botones "CREAR CUENTA" y "EMPEZAR GRATIS" de Home navegan a `/auth`.
+- [x] Link "VER SALÓN →" en la sección de actividad navega a `/salon-de-la-fama`.
+- [x] Las secciones de Home aparecen con animación reveal al hacer scroll (clase `.in` se agrega al entrar en viewport).
+- [x] El Nav muestra los links Inicio, Biblioteca, Salón de la Fama (sin "Acerca de"), en desktop y en el panel mobile.
+- [x] El link "Biblioteca" del Nav apunta a `/juego` y se marca activo en `/juego` y en `/juego/[id]`.
+- [x] El logo del Nav navega a `/` (Home).
+- [x] `npm run lint` pasa sin errores.
+- [x] `npx tsc --noEmit` pasa sin errores.
 
 ## Decisions
 
