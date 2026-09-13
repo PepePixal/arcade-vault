@@ -6,7 +6,9 @@
       "Bash(npx tsc *)"
     ]
   },
-  "disabledMcpjsonServers": [
+  "enabledMcpjsonServers": [
     "supabase"
-  ]
+  ],
+  "disabledMcpjsonServers": [],
+  "enableAllProjectMcpServers": true
 }
