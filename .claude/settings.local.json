@@ -5,5 +5,10 @@
       "Bash(npm run *)",
       "Bash(npx tsc *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "disabledMcpjsonServers": [],
+  "enableAllProjectMcpServers": true
 }
