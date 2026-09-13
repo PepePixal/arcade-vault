@@ -5,5 +5,8 @@
       "Bash(npm run *)",
       "Bash(npx tsc *)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "supabase"
+  ]
 }
