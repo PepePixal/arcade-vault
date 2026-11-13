@@ -42,7 +42,7 @@ export default async function GamePlayerPage({ params }: { params: Promise<{ id:
         <div className="hud-actions">
           <button className="btn yellow">PAUSA</button>
           <button className="btn magenta">FIN</button>
-          <Link href={`/juego/${game.id}`} className="btn ghost">
+          <Link href={`/juego/${game.id}`} className="btn purple">
             SALIR
           </Link>
         </div>
