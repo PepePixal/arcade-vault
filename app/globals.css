@@ -628,6 +628,10 @@ a { color: inherit; text-decoration: none; }
 
 .crt {
   position: relative;
+  /* keep the 4:3 screen within the viewport height (header + HUD reserved) */
+  width: min(100%, 860px, calc((100dvh - 300px) * 4 / 3 + 48px));
+  min-width: min(100%, 420px);
+  margin-inline: auto;
   border-radius: 28px;
   background: #050507;
   padding: 24px;
