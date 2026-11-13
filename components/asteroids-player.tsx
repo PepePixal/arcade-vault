@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   createAsteroidsGame,
   type AsteroidsGame,
@@ -68,14 +68,17 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
   const isGameOver = status === "gameover";
   const isPaused = status === "paused";
 
-  const togglePause = () => {
+  const togglePause = (e: MouseEvent<HTMLButtonElement>) => {
+    // Release focus so Space (the fire key) never targets the HUD button.
+    e.currentTarget.blur();
     const game = gameRef.current;
     if (!game) return;
     if (isPaused) game.resume();
     else game.pause();
   };
 
-  const endGame = () => {
+  const endGame = (e: MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.blur();
     gameRef.current?.end();
   };
 
