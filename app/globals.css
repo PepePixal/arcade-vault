@@ -689,6 +689,15 @@ a { color: inherit; text-decoration: none; }
   background: var(--green); box-shadow: 0 0 6px var(--green);
 }
 
+/* real in-screen game: 800x600 canvas scaled to fit the 4:3 CRT screen */
+.crt-screen .asteroids-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  background: #000;
+}
+
 /* fake in-screen game */
 .game-arena {
   position: absolute; inset: 0;

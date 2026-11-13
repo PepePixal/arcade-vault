@@ -1,11 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AsteroidsPlayer from "@/components/asteroids-player";
 import { GAMES } from "@/lib/data";
 
 export default async function GamePlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const game = GAMES.find((g) => g.id === id);
   if (!game) notFound();
+
+  if (game.id === "asteroides") {
+    return (
+      <div className="av-player fade-in">
+        <AsteroidsPlayer gameId={game.id} title={game.title} />
+      </div>
+    );
+  }
 
   return (
     <div className="av-player fade-in">

@@ -1,6 +1,6 @@
 # SPEC 05 — Integración del juego Asteroides
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-11-13
 > **Objective:** Integrar el juego Asteroids de `references/started-games/02-asteroids/` como el juego jugable "ASTEROIDES" de Arcade Vault, con tarjeta propia en `/juego`, detalle en `/juego/asteroides` y partida en `/juego/asteroides/jugar` dentro del CRT de la plataforma, enviándole puntuación, vidas y nivel al HUD de la plataforma.
