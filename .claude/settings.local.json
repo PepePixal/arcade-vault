@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git *)",
       "Bash(npm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(claude plugin *)"
     ]
   },
   "enableAllProjectMcpServers": true
