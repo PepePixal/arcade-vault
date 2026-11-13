@@ -87,6 +87,17 @@ export const GAMES: Game[] = [
     plays: "15.6K",
   },
   {
+    id: "asteroides",
+    title: "ASTEROIDES",
+    short: "Esquiva y destruye un cinturón de asteroides vectoriales.",
+    long: "Rota, propulsa y dispara para partir cada asteroide en fragmentos más pequeños y veloces. Limpia el campo para avanzar de nivel y atrapa los power-ups de Triple Shot y escudo. Tienes 3 vidas.",
+    cat: "SHOOTER",
+    cover: "cover-asteroides",
+    color: "cyan",
+    best: 0,
+    plays: "0",
+  },
+  {
     id: "ranaria",
     title: "RANARIA",
     short: "Cruza la autopista de pixeles.",

@@ -486,6 +486,31 @@ a { color: inherit; text-decoration: none; }
   text-shadow: 0 0 8px var(--yellow);
 }
 
+/* Vector-outline asteroids (distinct from the filled .cover-rocas) */
+.cover-asteroides { background: radial-gradient(ellipse at 30% 20%, #10204a, #02020c 70%); }
+.cover-asteroides::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 78% 28%, transparent 0 24px, var(--cyan) 25px 27px, transparent 28px),
+    radial-gradient(circle at 20% 72%, transparent 0 16px, var(--cyan) 17px 19px, transparent 20px),
+    radial-gradient(circle at 66% 78%, transparent 0 9px, var(--cyan) 10px 12px, transparent 13px),
+    radial-gradient(circle at 46% 46%, var(--magenta) 0 2px, transparent 3px),
+    radial-gradient(circle at 54% 40%, var(--magenta) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 34%, var(--magenta) 0 2px, transparent 3px),
+    radial-gradient(circle at 12% 18%, var(--ink) 0 1px, transparent 2px),
+    radial-gradient(circle at 90% 88%, var(--ink) 0 1px, transparent 2px),
+    radial-gradient(circle at 38% 12%, var(--ink) 0 1px, transparent 2px);
+  filter: drop-shadow(0 0 6px rgba(0,245,255,0.7));
+}
+.cover-asteroides::before {
+  content: "△";
+  position: absolute; left: 36%; top: 48%;
+  color: var(--magenta); font-size: 24px;
+  transform: rotate(50deg);
+  text-shadow: 0 0 8px var(--magenta);
+}
+
 .cover-rana { background: linear-gradient(180deg,#001f2a,#0a0a18); }
 .cover-rana::after {
   content: "";
