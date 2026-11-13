@@ -117,7 +117,7 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
           <button type="button" className="btn magenta" onClick={endGame} disabled={isGameOver}>
             FIN
           </button>
-          <Link href={`/juego/${gameId}`} className="btn ghost">
+          <Link href={`/juego/${gameId}`} className="btn purple">
             SALIR
           </Link>
         </div>
