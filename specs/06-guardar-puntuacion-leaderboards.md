@@ -1,6 +1,6 @@
 # SPEC 06 — Guardar puntuación y leaderboards reales
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 05
 > **Date:** 2026-11-14
 > **Objective:** Mostrar al terminar una partida de Asteroides un modal "FIN DEL JUEGO" que recoge el nombre del jugador y guarda su puntuación, alimentando el leaderboard del juego y el ranking global del Salón de la Fama a través de una capa `lib/scores` preparada para migrar a Supabase.
@@ -126,7 +126,11 @@ export interface AsteroidsGame {
 - **Sí (asumido):** `VOLVER AL VAULT` va a `/juego` (la biblioteca), y se permite salir sin guardar.
 - **Sí (asumido):** `restart()` en el motor en vez de remontar el componente, para conservar el canvas y los listeners sin reiniciar el efecto de React.
 - **Sí (previsión de futuro, indicada por el usuario):** las puntuaciones se almacenarán y leerán de Supabase. Por eso `lib/scores` es asíncrono desde ya aunque `localStorage` sea síncrono, y `ScoreEntry` ya incluye `id`, `gameId` y `createdAt`, que mapean directo a una tabla.
+- **Sí (interpretación durante la implementación):** el desempate del ranking global por "fecha más antigua de su mejor puntuación" usa el momento en que el jugador alcanzó su total actual (la más reciente de sus mejores puntuaciones por juego). Un jugador tiene una mejor puntuación por juego, así que la regla original admitía varias fechas.
+- **Sí (interpretación durante la implementación):** el último nombre se recuerda solo al guardar la puntuación con éxito, no al escribirlo. Los helpers del nombre (`getLastPlayerName`, `setLastPlayerName`, `sanitizeName`, `normalizeName`) viven en `lib/scores/` para que ningún componente toque `localStorage`.
+- **Sí (implementación):** el modal reusa el marcado de `references/templates/reproductor.jsx` y los estilos `.modal*` existentes. Tras guardar, la fila del nombre queda visible y bloqueada en vez de ocultarse, para cumplir "el botón queda deshabilitado".
 - **No:** Supabase, Auth ni antitrampas en este spec; cada uno merece el suyo.
+- **Pendiente para un spec futuro (indicado por el usuario durante la implementación):** "Mejor global" y "Partidas" del detalle de juego, y `RECENT_ACTIVITY`/`TOP_PLAYERS_TODAY` de la home, siguen con datos mock.
 
 ## Identified risks
 

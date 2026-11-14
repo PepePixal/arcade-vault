@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import GameOverModal from "@/components/game-over-modal";
 import {
   createAsteroidsGame,
   type AsteroidsGame,
   type AsteroidsStats,
   type AsteroidsStatus,
 } from "@/lib/games/asteroids/engine";
+import { saveScore, setLastPlayerName } from "@/lib/scores";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
@@ -27,6 +30,8 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
   const gameRef = useRef<AsteroidsGame | null>(null);
   const [stats, setStats] = useState<AsteroidsStats>(INITIAL_STATS);
   const [status, setStatus] = useState<AsteroidsStatus>("playing");
+  const [finalStats, setFinalStats] = useState<AsteroidsStats | null>(null);
+  const router = useRouter();
 
   // Engine lifecycle: one instance per mount, destroyed on unmount
   // (also covers React Strict Mode's double mount in development).
@@ -37,10 +42,7 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
     const game = createAsteroidsGame(canvas, {
       onStats: setStats,
       onStatus: setStatus,
-      onGameOver: () => {
-        // Session-only scores: nothing is persisted yet.
-        // Future hook point for saving a score (see SPEC 05, Decisions).
-      },
+      onGameOver: setFinalStats,
     });
     gameRef.current = game;
     game.start();
@@ -80,6 +82,20 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
   const endGame = (e: MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
     gameRef.current?.end();
+  };
+
+  const handleSave = async (name: string) => {
+    if (!finalStats) return;
+    await saveScore({ gameId, name, score: finalStats.score, level: finalStats.level });
+    setLastPlayerName(name);
+  };
+
+  const handleRestart = () => {
+    gameRef.current?.restart();
+  };
+
+  const handleExit = () => {
+    router.push("/juego");
   };
 
   return (
@@ -142,6 +158,15 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
           <span>CARGA · 1MB</span>
         </div>
       </div>
+
+      {isGameOver && finalStats && (
+        <GameOverModal
+          score={finalStats.score}
+          onSave={handleSave}
+          onRestart={handleRestart}
+          onExit={handleExit}
+        />
+      )}
     </>
   );
 }
