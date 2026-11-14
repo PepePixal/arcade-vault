@@ -22,6 +22,7 @@ export interface AsteroidsGame {
   pause(): void;
   resume(): void;
   end(): void; // forces game over (FIN button)
+  restart(): void; // new game: 3 lives, level 1, score 0
   destroy(): void; // cancels the loop and removes listeners
 }
 
@@ -492,7 +493,7 @@ export function createAsteroidsGame(
   function enterGameOver(): void {
     state = "gameover";
     ship.dead = true;
-    // Drop buffered presses so a stale Space does not restart instantly.
+    // Drop buffered presses so stale input does not leak into the next game.
     for (const k of Object.keys(justPressed)) justPressed[k] = false;
     emitStatsIfChanged();
     emitStatus("gameover");
@@ -576,7 +577,7 @@ export function createAsteroidsGame(
   // ── Update ──
   function update(dt: number): void {
     if (state === "gameover") {
-      if (pressed("Space")) initGame();
+      // The platform owns the end-of-game screen; restart only via restart().
       updateParticles(dt);
       return;
     }
@@ -768,16 +769,6 @@ export function createAsteroidsGame(
     ctx.fillText("TRIPLE SHOT", barX, barY + 14);
   }
 
-  function drawOverlay(title: string, sub: string): void {
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 46px monospace";
-    ctx.fillText(title, W / 2, H / 2 - 18);
-    ctx.font = "18px monospace";
-    ctx.fillStyle = "rgba(255,255,255,0.65)";
-    ctx.fillText(sub, W / 2, H / 2 + 22);
-  }
-
   function draw(): void {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
@@ -791,10 +782,6 @@ export function createAsteroidsGame(
     ship.draw(ctx);
 
     drawTripleShotBar();
-
-    if (state === "gameover") {
-      drawOverlay("GAME OVER", `PUNTAJE: ${score}   —   ESPACIO PARA REINICIAR`);
-    }
   }
 
   // ── Main loop ──
@@ -857,7 +844,15 @@ export function createAsteroidsGame(
       paused = false;
       clearInput();
       enterGameOver();
-      runLoop(); // keep rendering the GAME OVER overlay and accept Space to restart
+      runLoop(); // keep animating the explosion behind the platform's end screen
+    },
+
+    restart(): void {
+      if (!started || destroyed) return;
+      paused = false;
+      clearInput();
+      initGame();
+      runLoop();
     },
 
     destroy(): void {
