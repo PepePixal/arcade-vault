@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useGameStats } from "@/components/use-game-stats";
+import { useGameStats } from "@/components/games/use-game-stats";
 import type { Game } from "@/lib/data";
 
 export function GameCard({ game }: { game: Game }) {
