@@ -14,4 +14,9 @@ export interface GlobalRankingRow {
   games: number; // number of games with at least one score
 }
 
+export interface GameStats {
+  best: number | null; // best saved score, null when there is none
+  plays: number; // number of saved games (0 when there are none)
+}
+
 export type NewScore = Omit<ScoreEntry, "id" | "createdAt">;
