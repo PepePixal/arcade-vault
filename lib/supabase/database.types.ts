@@ -50,9 +50,59 @@ export type Database = {
         }
         Relationships: []
       }
+      scores_asteroides: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          name: string
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: number
+          name: string
+          score: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          name?: string
+          score?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      global_scores: {
+        Row: {
+          created_at: string | null
+          game_id: string | null
+          id: string | null
+          level: number | null
+          name: string | null
+          score: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          game_id?: never
+          id?: string | null
+          level?: number | null
+          name?: string | null
+          score?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: never
+          id?: string | null
+          level?: number | null
+          name?: string | null
+          score?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
