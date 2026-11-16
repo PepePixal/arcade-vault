@@ -2,11 +2,14 @@
 
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useGameStats } from "@/components/use-game-stats";
 import type { Game } from "@/lib/data";
 
 export function GameCard({ game }: { game: Game }) {
   const tiltRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const stats = useGameStats(game.id);
+  const best = stats?.plays ? stats.best : null;
 
   const goToDetail = () => router.push(`/juego/${game.id}`);
 
@@ -37,7 +40,7 @@ export function GameCard({ game }: { game: Game }) {
         <div className="row">
           <div className="score-badge">
             <span>MEJOR PUNTUACIÓN</span>
-            <b>{game.best.toLocaleString("es-ES")}</b>
+            <b>{best !== null ? best.toLocaleString("es-ES") : "—"}</b>
           </div>
           <button
             className={"btn " + (game.color === "magenta" ? "magenta" : game.color === "yellow" ? "yellow" : "")}

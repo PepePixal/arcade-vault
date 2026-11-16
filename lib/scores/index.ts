@@ -1,9 +1,9 @@
 // Public score API. Components depend only on these async functions, never on
 // the storage backend, so the localStorage implementation can later be swapped
 // for Supabase without touching callers.
-import type { GlobalRankingRow, NewScore, ScoreEntry } from "./types";
+import type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types";
 
-export type { GlobalRankingRow, NewScore, ScoreEntry } from "./types";
+export type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types";
 
 const SCORES_KEY = "arcade-vault:scores:v1";
 const PLAYER_NAME_KEY = "arcade-vault:player-name:v1";
@@ -97,6 +97,15 @@ export async function getGameScores(gameId: string, limit = 10): Promise<ScoreEn
     .filter((e) => e.gameId === gameId)
     .sort(byScoreDescThenOldest)
     .slice(0, limit);
+}
+
+export async function getGameStats(gameId: string): Promise<GameStats> {
+  const entries = readAll().filter((e) => e.gameId === gameId);
+  if (entries.length === 0) return { best: null, plays: 0 };
+  return {
+    best: entries.reduce((max, e) => Math.max(max, e.score), 0),
+    plays: entries.length,
+  };
 }
 
 /**

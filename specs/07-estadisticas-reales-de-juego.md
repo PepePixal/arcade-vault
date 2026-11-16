@@ -1,6 +1,6 @@
 # SPEC 07 — Estadísticas reales de juego
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 06
 > **Date:** 2026-11-16
 > **Objective:** Reemplazar los valores mock "Mejor global" y "Partidas" del detalle de juego, y la "Mejor puntuación" de las tarjetas de la biblioteca, por estadísticas calculadas desde `lib/scores`.
