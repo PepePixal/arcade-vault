@@ -1,6 +1,6 @@
 # SPEC 09 — Tabla de juegos en Supabase
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 04, SPEC 05
 > **Date:** 2026-11-16
 > **Objective:** Crear en Supabase la tabla `games` (catálogo de juegos) con RLS de solo lectura y el juego `asteroides` como seed, como base para las tablas de puntuación por juego de specs futuras.
