@@ -1,6 +1,6 @@
 # SPEC 10 — Tabla de puntuaciones de Asteroides en Supabase
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 04, SPEC 06, SPEC 09
 > **Date:** 2026-11-16
 > **Objective:** Crear en Supabase la tabla `scores_asteroides` con RLS, checks de validación y la vista `global_scores` para el ranking global, como base para migrar `lib/scores` en una spec futura.
