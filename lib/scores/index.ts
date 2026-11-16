@@ -109,15 +109,16 @@ export async function getGameStats(gameId: string): Promise<GameStats> {
 }
 
 /**
- * Global ranking: per player (normalized name), the sum of their best score in
- * each game. Ties are broken by who reached that total first, i.e. the earliest
- * moment at which all of their per-game bests already existed.
+ * Ranks players over the given entries: per player (normalized name), the sum of
+ * their best score in each game. Ties are broken by who reached that total
+ * first, i.e. the earliest moment at which all of their per-game bests already
+ * existed. Shared by the global and the daily ranking so the rule lives once.
  */
-export async function getGlobalRanking(limit = 10): Promise<GlobalRankingRow[]> {
+function rankPlayers(entries: ScoreEntry[], limit: number): GlobalRankingRow[] {
   // player -> gameId -> best entry
   const bests = new Map<string, Map<string, ScoreEntry>>();
 
-  for (const entry of readAll()) {
+  for (const entry of entries) {
     const name = normalizeName(entry.name);
     if (!name) continue;
     let perGame = bests.get(name);
@@ -152,6 +153,28 @@ export async function getGlobalRanking(limit = 10): Promise<GlobalRankingRow[]> 
     total: r.total,
     games: r.games,
   }));
+}
+
+export async function getGlobalRanking(limit = 10): Promise<GlobalRankingRow[]> {
+  return rankPlayers(readAll(), limit);
+}
+
+/** Same ranking rule as the global one, over entries saved since 00:00 local time today. */
+export async function getTodayRanking(limit = 5): Promise<GlobalRankingRow[]> {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const since = startOfToday.getTime();
+  return rankPlayers(
+    readAll().filter((e) => new Date(e.createdAt).getTime() >= since),
+    limit,
+  );
+}
+
+/** Latest saved scores across all games, newest first. */
+export async function getRecentScores(limit = 7): Promise<ScoreEntry[]> {
+  return readAll()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
 }
 
 export function getLastPlayerName(): string {

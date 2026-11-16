@@ -10,13 +10,6 @@ export interface Game {
   color: "cyan" | "magenta" | "green" | "yellow";
 }
 
-export interface ScoreRow {
-  rank: number;
-  name: string;
-  score: number;
-  date: string;
-}
-
 export const GAMES: Game[] = [
   {
     id: "bloque-buster",
@@ -103,30 +96,10 @@ export const GAMES: Game[] = [
 
 export const CATS: string[] = ["TODOS", "ARCADE", "PUZZLE", "SHOOTER", "VERSUS"];
 
-export const PLAYERS: string[] = [
-  "PX_KAI", "NEONFOX", "Z3R0COOL", "M00NRYU", "VAULT_07", "GLITCHA",
-  "ATARI_KID", "CYBER_LU", "MAGENTA88", "SCANLINE", "BIT_LORD", "ARKADYA",
-  "DROID_X", "RGB_QUEEN", "PIXEL_DAD", "RETROVIRA", "VECTORX", "JOY_STK",
-];
-
 export interface HomeStat {
   n: string;
   u: string;
   s: string;
-}
-
-export interface ActivityEntry {
-  p: string;
-  g: string;
-  s: number;
-  t: string;
-  c: "cyan" | "magenta" | "green" | "yellow";
-}
-
-export interface TopPlayerEntry {
-  r: number;
-  p: string;
-  s: number;
 }
 
 export const HOME_STATS: HomeStat[] = [
@@ -134,41 +107,3 @@ export const HOME_STATS: HomeStat[] = [
   { n: "MILES", u: "DE PARTIDAS", s: "JUGADAS CADA DÍA" },
   { n: "GLOBAL", u: "RANKING", s: "COMPITE CON EL MUNDO" },
 ];
-
-export const RECENT_ACTIVITY: ActivityEntry[] = [
-  { p: "NEONFOX", g: "Caída", s: 184220, t: "hace 2 min", c: "magenta" },
-  { p: "PX_KAI", g: "Glotón", s: 96400, t: "hace 5 min", c: "yellow" },
-  { p: "Z3R0COOL", g: "Invasores", s: 54190, t: "hace 8 min", c: "green" },
-  { p: "VAULT_07", g: "Rocas", s: 41200, t: "hace 12 min", c: "cyan" },
-  { p: "GLITCHA", g: "Bloque Buster", s: 28450, t: "hace 18 min", c: "cyan" },
-  { p: "ARKADYA", g: "Serpentina", s: 7820, t: "hace 24 min", c: "green" },
-  { p: "CYBER_LU", g: "Ranaria", s: 18900, t: "hace 31 min", c: "yellow" },
-];
-
-export const TOP_PLAYERS_TODAY: TopPlayerEntry[] = [
-  { r: 1, p: "NEONFOX", s: 312840 },
-  { r: 2, p: "PX_KAI", s: 248110 },
-  { r: 3, p: "M00NRYU", s: 196720 },
-  { r: 4, p: "VAULT_07", s: 154300 },
-  { r: 5, p: "GLITCHA", s: 138900 },
-];
-
-export function seededScores(seed: number, count: number = 12): ScoreRow[] {
-  let s = seed;
-  const rand = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-  const used = new Set<string>();
-  const rows: ScoreRow[] = [];
-  for (let i = 0; i < count; i++) {
-    let name: string;
-    do {
-      name = PLAYERS[Math.floor(rand() * PLAYERS.length)];
-    } while (used.has(name) && used.size < PLAYERS.length);
-    used.add(name);
-    const base = Math.floor(50000 + rand() * 250000);
-    const score = base - i * Math.floor(2000 + rand() * 4000);
-    const day = String(1 + Math.floor(rand() * 28)).padStart(2, "0");
-    const mon = String(1 + Math.floor(rand() * 12)).padStart(2, "0");
-    rows.push({ rank: i + 1, name, score: Math.max(score, 1000), date: `${day}/${mon}/2026` });
-  }
-  return rows.sort((a, b) => b.score - a.score).map((r, i) => ({ ...r, rank: i + 1 }));
-}
