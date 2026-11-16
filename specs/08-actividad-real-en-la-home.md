@@ -1,6 +1,6 @@
 # SPEC 08 — Actividad real en la home
 
-> **Status:** Borrador
+> **Status:** Aprobado
 > **Depends on:** SPEC 02, SPEC 06
 > **Date:** 2026-11-16
 > **Objective:** Reemplazar los datos mock de la sección "ACTIVIDAD EN VIVO" de la home (últimas puntuaciones y top jugadores de hoy) por datos reales leídos desde `lib/scores`.
