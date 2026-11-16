@@ -11,7 +11,7 @@
 - Migración SQL que crea `public.scores_asteroides` con sus checks e índices.
 - RLS activado: SELECT público, INSERT para `anon` y `authenticated`, sin UPDATE ni DELETE desde cliente.
 - Vista `public.global_scores` (puntuaciones de todos los juegos con su `game_id`), creada con `security_invoker = true`.
-- Copia de la migración en `supabase/migrations/`.
+- Copia de las migraciones en `supabase/migrations/` (una por cada `apply_migration`: tabla y vista).
 - Tipos regenerados en `lib/supabase/database.types.ts`.
 - Verificación con `get_advisors` (security y performance).
 
@@ -57,7 +57,7 @@ Convenciones:
 
 1. Aplicar con `apply_migration` la creación de `scores_asteroides`: columnas, checks, índices, `enable row level security` y las policies (SELECT para `anon` y `authenticated`; INSERT para `anon` y `authenticated`).
 2. Crear la vista `global_scores` con `security_invoker = true`.
-3. Guardar el mismo SQL en `supabase/migrations/<version>_create_scores_asteroides.sql`, usando la `version` real que devuelve `list_migrations`.
+3. Guardar el mismo SQL de cada migración aplicada en su propio archivo, `supabase/migrations/<version>_create_scores_asteroides.sql` y `supabase/migrations/<version>_create_global_scores_view.sql`, usando las `version` reales que devuelve `list_migrations`.
 4. Regenerar los tipos con `generate_typescript_types` y actualizar `lib/supabase/database.types.ts`.
 5. Ejecutar `get_advisors` (security y performance) y corregir los avisos que dependan de este spec.
 6. Verificación: `list_tables`; con rol `anon`, un INSERT válido funciona y los inválidos se rechazan; UPDATE y DELETE afectan 0 filas; SELECT sobre la vista; limpiar las filas de prueba (bloque `DO` con rollback, como en SPEC 09); `npm run lint`, `npx tsc --noEmit` y `npm run build`.
@@ -70,7 +70,7 @@ Convenciones:
 - [ ] Se rechazan nombre vacío, de más de 12 caracteres, en minúsculas o con caracteres fuera de `A-Z`, `0-9`, espacio y guion; `score` negativo y `level` menor que 1.
 - [ ] UPDATE y DELETE como `anon` afectan 0 filas.
 - [ ] La vista `global_scores` devuelve las filas de `scores_asteroides` con `game_id = 'asteroides'` y respeta la RLS de la tabla.
-- [ ] `supabase/migrations/` contiene la migración aplicada, con la `version` real.
+- [ ] `supabase/migrations/` contiene las dos migraciones aplicadas (`create_scores_asteroides` y `create_global_scores_view`), con sus `version` reales.
 - [ ] `lib/supabase/database.types.ts` incluye `scores_asteroides` y la vista.
 - [ ] `get_advisors` no muestra errores críticos nuevos de seguridad en las tablas y vistas de este spec.
 - [ ] La tabla queda sin filas de prueba al terminar.
