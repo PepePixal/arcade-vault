@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import GameLeaderboard from "@/components/game-leaderboard";
-import GameStats from "@/components/game-stats";
+import GameLeaderboard from "@/components/games/game-leaderboard";
+import GameStats from "@/components/games/game-stats";
 import { GAMES } from "@/lib/data";
 
 export default async function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {

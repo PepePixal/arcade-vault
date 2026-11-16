@@ -1,5 +1,5 @@
 import Link from "next/link";
-import HallOfFame from "@/components/hall-of-fame";
+import HallOfFame from "@/components/hall-of-fame/hall-of-fame";
 import { GAMES } from "@/lib/data";
 
 export default function HallOfFamePage() {

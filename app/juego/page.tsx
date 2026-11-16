@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GAMES, CATS } from "@/lib/data";
-import { GameCard } from "@/components/game-card";
+import { GameCard } from "@/components/games/game-card";
 
 export default function Biblioteca() {
   const [q, setQ] = useState("");

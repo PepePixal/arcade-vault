@@ -1,6 +1,6 @@
 "use client";
 
-import { useGameStats } from "@/components/use-game-stats";
+import { useGameStats } from "@/components/games/use-game-stats";
 
 const NO_DATA = "—";
 

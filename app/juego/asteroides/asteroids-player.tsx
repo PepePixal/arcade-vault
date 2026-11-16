@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import GameOverModal from "@/components/game-over-modal";
+import GameOverModal from "@/components/games/game-over-modal";
 import {
   createAsteroidsGame,
   type AsteroidsGame,
   type AsteroidsStats,
   type AsteroidsStatus,
-} from "@/lib/games/asteroids/engine";
+} from "./engine";
 import { saveScore, setLastPlayerName } from "@/lib/scores";
 
 const CANVAS_WIDTH = 800;

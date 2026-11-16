@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import HomeActivity from "@/components/home-activity";
+import HomeActivity from "@/components/home/home-activity";
 import { GAMES, HOME_STATS, type Game } from "@/lib/data";
 
 function useReveal() {
