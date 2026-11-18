@@ -5,7 +5,7 @@
 > **Date:** 2026-11-18
 > **Objective:** Leer en el servidor el catálogo de juegos (título, descripciones, categoría, cover y color) desde la tabla `games` de Supabase en lugar de `GAMES` en `lib/data.ts`, y eliminar `GAMES`.
 
-## Scope
+## Scope.
 
 **In:**
 - Módulo nuevo `lib/games.ts`, solo para servidor, con `getGames()` y `getGame(id)`, que leen `games` con `createClient` de `lib/supabase/server.ts` y devuelven objetos `Game`.
