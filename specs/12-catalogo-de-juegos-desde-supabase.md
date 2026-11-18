@@ -1,6 +1,6 @@
 # SPEC 12 — Catálogo de juegos desde Supabase
 
-> **Status:** Aprobada
+> **Status:** Implementada
 > **Depends on:** SPEC 01, SPEC 02, SPEC 04, SPEC 09, SPEC 11
 > **Date:** 2026-11-18
 > **Objective:** Leer en el servidor el catálogo de juegos (título, descripciones, categoría, cover y color) desde la tabla `games` de Supabase en lugar de `GAMES` en `lib/data.ts`, y eliminar `GAMES`.

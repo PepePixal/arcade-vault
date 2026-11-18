@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import GameLeaderboard from "@/components/games/game-leaderboard";
 import GameStats from "@/components/games/game-stats";
-import { GAMES } from "@/lib/data";
+import { getGame } from "@/lib/games";
 
 export default async function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const game = GAMES.find((g) => g.id === id);
+  const game = await getGame(id);
   if (!game) notFound();
 
   return (

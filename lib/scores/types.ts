@@ -1,6 +1,6 @@
 export interface ScoreEntry {
   id: string; // crypto.randomUUID()
-  gameId: string; // GAMES[].id, e.g. "asteroides"
+  gameId: string; // games.id, e.g. "asteroides"
   name: string; // 1–12 characters, uppercase, already normalized
   score: number; // integer >= 0
   level: number; // level reached
