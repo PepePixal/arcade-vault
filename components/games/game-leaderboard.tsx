@@ -6,7 +6,7 @@ import { formatScoreDate } from "@/lib/scores/format";
 
 const ROW_LIMIT = 10;
 
-// Scores live in the browser (localStorage for now), so they are loaded after mount.
+// Scores are fetched from Supabase from the browser, so they are loaded after mount.
 export default function GameLeaderboard({ gameId }: { gameId: string }) {
   const [scores, setScores] = useState<ScoreEntry[] | null>(null);
 

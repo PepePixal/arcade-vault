@@ -34,7 +34,7 @@ function EmptyState({ title, text }: { title: string; text: string }) {
   );
 }
 
-// Scores live in the browser (localStorage for now), so they are loaded after
+// Scores are fetched from Supabase from the browser, so they are loaded after
 // mount; until then both cards show a loading line and server HTML stays stable.
 export default function HomeActivity() {
   const [data, setData] = useState<ActivityData | null>(null);

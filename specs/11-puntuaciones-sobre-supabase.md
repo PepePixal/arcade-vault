@@ -1,6 +1,6 @@
 # SPEC 11 — Puntuaciones sobre Supabase
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 06, SPEC 08, SPEC 09, SPEC 10
 > **Date:** 2026-11-18
 > **Objective:** Reemplazar la implementación `localStorage` de `lib/scores` por consultas a Supabase (`scores_asteroides` y `global_scores`), manteniendo las firmas públicas y los componentes que la consumen.
@@ -58,7 +58,7 @@ Convenciones:
 
 ## Acceptance criteria
 
-- [ ] Las firmas públicas de `lib/scores` no cambian y ningún componente, salvo el texto de error de `GameOverModal`, se modifica.
+- [ ] Las firmas públicas de `lib/scores` no cambian y los componentes solo se modifican en el texto de error de `GameOverModal` y en los comentarios que mencionaban `localStorage` (`game-leaderboard.tsx` y `home-activity.tsx`); su lógica y su marcado no cambian.
 - [ ] Guardar una puntuación de Asteroides crea una fila en `scores_asteroides` con el nombre normalizado, la puntuación y el nivel.
 - [ ] La puntuación guardada aparece en el leaderboard de `/juego/asteroides`, en el Salón de la Fama y en `ÚLTIMAS PUNTUACIONES` de la home, y sigue ahí tras recargar.
 - [ ] El leaderboard del juego ordena de mayor a menor puntuación y, en empate, gana la más antigua.
@@ -80,7 +80,8 @@ Convenciones:
 - **Sí (decisión del usuario):** el `gameId` se resuelve a su tabla con un mapa tipado en el código. Se descartó leer `games.score_table` en cada consulta: perdería el tipado de supabase-js y añadiría una consulta por lectura. Consecuencia aceptada: el mapa puede divergir de `games.score_table`.
 - **Sí (asumido):** "hoy" sigue siendo el día natural local del navegador, como en SPEC 08.
 - **Sí (asumido):** el último nombre usado sigue en `localStorage`, porque es una preferencia del navegador y no un dato compartido.
-- **Sí (asumido):** los consumidores no cambian porque ya manejan carga, vacío y error; solo se actualiza el texto de error del modal, que hablaba de `localStorage`.
+- **Sí (asumido):** los consumidores no cambian en lógica porque ya manejan carga, vacío y error; solo se actualiza el texto de error del modal, que hablaba de `localStorage`, y se corrigen dos comentarios desactualizados (`game-leaderboard.tsx` y `home-activity.tsx`), por decisión del usuario durante la implementación.
+- **Sí (decisión durante la implementación):** el ranking lee `global_scores` página a página (1000 filas por petición), porque PostgREST limita cada respuesta y, sin paginar, el ranking se calcularía en silencio con datos incompletos a partir de la fila 1001.
 - **Sí (asumido):** la puntuación se guarda como antes: el cliente normaliza el nombre y el `check` de la tabla actúa como segunda barrera.
 - **No:** autenticación, antitrampas, importar datos de `localStorage`, Realtime, tablas de otros juegos y leer `games` desde la UI en este spec.
 
