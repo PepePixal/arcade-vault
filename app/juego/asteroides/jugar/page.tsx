@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { GAMES } from "@/lib/data";
+import { getGame } from "@/lib/games";
 import AsteroidsPlayer from "../asteroids-player";
 
 const GAME_ID = "asteroides";
 
-export default function AsteroidsPlayerPage() {
-  const game = GAMES.find((g) => g.id === GAME_ID);
+export default async function AsteroidsPlayerPage() {
+  const game = await getGame(GAME_ID);
   if (!game) notFound();
 
   return (

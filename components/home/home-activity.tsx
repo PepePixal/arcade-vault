@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GAMES } from "@/lib/data";
+import type { Game } from "@/lib/data";
 import {
   getRecentScores,
   getTodayRanking,
@@ -36,7 +36,7 @@ function EmptyState({ title, text }: { title: string; text: string }) {
 
 // Scores are fetched from Supabase from the browser, so they are loaded after
 // mount; until then both cards show a loading line and server HTML stays stable.
-export default function HomeActivity() {
+export default function HomeActivity({ games }: { games: Game[] }) {
   const [data, setData] = useState<ActivityData | null>(null);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function HomeActivity() {
         ) : (
           <div className="ticker">
             {data.recent.map((r, i) => {
-              const game = GAMES.find((g) => g.id === r.gameId);
+              const game = games.find((g) => g.id === r.gameId);
               return (
                 <div key={r.id} className="tick-row" style={{ animationDelay: i * 60 + "ms" }}>
                   <span className={game ? "tk-p neon-" + game.color : "tk-p"}>{r.name}</span>

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import HallOfFame from "@/components/hall-of-fame/hall-of-fame";
-import { GAMES } from "@/lib/data";
+import { getGames } from "@/lib/games";
 
-export default function HallOfFamePage() {
-  const games = GAMES.map((g) => ({ id: g.id, title: g.title }));
+export default async function HallOfFamePage() {
+  const games = (await getGames()).map((g) => ({ id: g.id, title: g.title }));
 
   return (
     <div className="av-hall fade-in">
