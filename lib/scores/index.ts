@@ -1,11 +1,59 @@
-// Public score API. Components depend only on these async functions, never on
-// the storage backend, so the localStorage implementation can later be swapped
-// for Supabase without touching callers.
+// Public score API, backed by Supabase. Components depend only on these async
+// functions, never on the storage backend. Only the last used player name stays
+// in localStorage, as a browser-local preference.
+import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 import type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types";
 
 export type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types";
 
-const SCORES_KEY = "arcade-vault:scores:v1";
+// gameId -> score table. A game without an entry has no saved scores (mock games).
+// Adding a game also means extending the `global_scores` view with its table.
+const SCORE_TABLES = {
+  asteroides: "scores_asteroides",
+} as const satisfies Record<string, keyof Database["public"]["Tables"]>;
+
+type ScoreGameId = keyof typeof SCORE_TABLES;
+type ScoreTable = (typeof SCORE_TABLES)[ScoreGameId];
+
+function getScoreTable(gameId: string): ScoreTable | null {
+  return Object.prototype.hasOwnProperty.call(SCORE_TABLES, gameId)
+    ? SCORE_TABLES[gameId as ScoreGameId]
+    : null;
+}
+
+// Shared shape of a row from a score table (non-null) and from `global_scores`
+// (every column nullable in the generated types).
+interface ScoreRow {
+  id: string | null;
+  name: string | null;
+  score: number | null;
+  level: number | null;
+  created_at: string | null;
+}
+
+/** Maps a database row to a ScoreEntry, or null when the row is incomplete. */
+function toScoreEntry(gameId: string | null, row: ScoreRow): ScoreEntry | null {
+  if (
+    gameId === null ||
+    row.id === null ||
+    row.name === null ||
+    row.score === null ||
+    row.level === null ||
+    row.created_at === null
+  ) {
+    return null;
+  }
+  return {
+    id: row.id,
+    gameId,
+    name: row.name,
+    score: row.score,
+    level: row.level,
+    createdAt: row.created_at,
+  };
+}
+
 const PLAYER_NAME_KEY = "arcade-vault:player-name:v1";
 
 export const NAME_MAX_LENGTH = 12;
@@ -33,43 +81,6 @@ function getStorage(): Storage | null {
   }
 }
 
-function isScoreEntry(value: unknown): value is ScoreEntry {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === "string" &&
-    typeof v.gameId === "string" &&
-    typeof v.name === "string" &&
-    v.name.length > 0 &&
-    typeof v.score === "number" &&
-    Number.isFinite(v.score) &&
-    v.score >= 0 &&
-    typeof v.level === "number" &&
-    Number.isFinite(v.level) &&
-    typeof v.createdAt === "string"
-  );
-}
-
-function readAll(): ScoreEntry[] {
-  const storage = getStorage();
-  if (!storage) return [];
-  try {
-    const raw = storage.getItem(SCORES_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isScoreEntry);
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(entries: ScoreEntry[]): void {
-  const storage = getStorage();
-  if (!storage) throw new Error("Score storage is unavailable");
-  storage.setItem(SCORES_KEY, JSON.stringify(entries));
-}
-
 function byScoreDescThenOldest(a: ScoreEntry, b: ScoreEntry): number {
   if (b.score !== a.score) return b.score - a.score;
   return a.createdAt.localeCompare(b.createdAt);
@@ -79,33 +90,58 @@ export async function saveScore(entry: NewScore): Promise<ScoreEntry> {
   const name = normalizeName(entry.name);
   if (!name) throw new Error("Player name is required");
 
-  const saved: ScoreEntry = {
-    id: crypto.randomUUID(),
-    gameId: entry.gameId,
-    name,
-    score: Math.max(0, Math.floor(entry.score)),
-    level: Math.max(1, Math.floor(entry.level)),
-    createdAt: new Date().toISOString(),
-  };
+  const table = getScoreTable(entry.gameId);
+  if (!table) throw new Error(`No score table for game "${entry.gameId}"`);
 
-  writeAll([...readAll(), saved]);
+  const { data, error } = await createClient()
+    .from(table)
+    .insert({
+      name,
+      score: Math.max(0, Math.floor(entry.score)),
+      level: Math.max(1, Math.floor(entry.level)),
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  const saved = toScoreEntry(entry.gameId, data);
+  if (!saved) throw new Error("Saved score came back incomplete");
   return saved;
 }
 
 export async function getGameScores(gameId: string, limit = 10): Promise<ScoreEntry[]> {
-  return readAll()
-    .filter((e) => e.gameId === gameId)
-    .sort(byScoreDescThenOldest)
-    .slice(0, limit);
+  const table = getScoreTable(gameId);
+  if (!table) return [];
+
+  const { data, error } = await createClient()
+    .from(table)
+    .select("id, name, score, level, created_at")
+    .order("score", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+
+  return data.flatMap((row) => {
+    const entry = toScoreEntry(gameId, row);
+    return entry ? [entry] : [];
+  });
 }
 
 export async function getGameStats(gameId: string): Promise<GameStats> {
-  const entries = readAll().filter((e) => e.gameId === gameId);
-  if (entries.length === 0) return { best: null, plays: 0 };
-  return {
-    best: entries.reduce((max, e) => Math.max(max, e.score), 0),
-    plays: entries.length,
-  };
+  const table = getScoreTable(gameId);
+  if (!table) return { best: null, plays: 0 };
+
+  const supabase = createClient();
+  const [count, top] = await Promise.all([
+    supabase.from(table).select("id", { count: "exact", head: true }),
+    supabase.from(table).select("score").order("score", { ascending: false }).limit(1),
+  ]);
+  if (count.error) throw count.error;
+  if (top.error) throw top.error;
+
+  const plays = count.count ?? 0;
+  if (plays === 0) return { best: null, plays: 0 };
+  return { best: top.data[0]?.score ?? null, plays };
 }
 
 /**
@@ -155,26 +191,59 @@ function rankPlayers(entries: ScoreEntry[], limit: number): GlobalRankingRow[] {
   }));
 }
 
+// PostgREST caps a single response (1000 rows by default), so rankings read the
+// view page by page to really rank every saved score.
+const RANKING_PAGE_SIZE = 1000;
+
+/** Every saved score across all games, optionally only those created since a date. */
+async function fetchAllScores(since?: Date): Promise<ScoreEntry[]> {
+  const supabase = createClient();
+  const entries: ScoreEntry[] = [];
+
+  for (let from = 0; ; from += RANKING_PAGE_SIZE) {
+    let query = supabase
+      .from("global_scores")
+      .select("game_id, id, name, score, level, created_at");
+    if (since) query = query.gte("created_at", since.toISOString());
+
+    const { data, error } = await query
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + RANKING_PAGE_SIZE - 1);
+    if (error) throw error;
+
+    for (const row of data) {
+      const entry = toScoreEntry(row.game_id, row);
+      if (entry) entries.push(entry);
+    }
+    if (data.length < RANKING_PAGE_SIZE) return entries;
+  }
+}
+
 export async function getGlobalRanking(limit = 10): Promise<GlobalRankingRow[]> {
-  return rankPlayers(readAll(), limit);
+  return rankPlayers(await fetchAllScores(), limit);
 }
 
 /** Same ranking rule as the global one, over entries saved since 00:00 local time today. */
 export async function getTodayRanking(limit = 5): Promise<GlobalRankingRow[]> {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const since = startOfToday.getTime();
-  return rankPlayers(
-    readAll().filter((e) => new Date(e.createdAt).getTime() >= since),
-    limit,
-  );
+  return rankPlayers(await fetchAllScores(startOfToday), limit);
 }
 
 /** Latest saved scores across all games, newest first. */
 export async function getRecentScores(limit = 7): Promise<ScoreEntry[]> {
-  return readAll()
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, limit);
+  const { data, error } = await createClient()
+    .from("global_scores")
+    .select("game_id, id, name, score, level, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  return data.flatMap((row) => {
+    const entry = toScoreEntry(row.game_id, row);
+    return entry ? [entry] : [];
+  });
 }
 
 export function getLastPlayerName(): string {

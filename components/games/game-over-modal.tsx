@@ -74,7 +74,7 @@ export default function GameOverModal({ score, onSave, onRestart, onExit }: Game
           {saveState === "saved" && <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>}
           {saveState === "error" && (
             <p className="save-error">
-              No se pudo guardar la puntuación. Comprueba que el navegador permite guardar datos e inténtalo de nuevo.
+              No se pudo guardar la puntuación. Comprueba tu conexión e inténtalo de nuevo.
             </p>
           )}
         </div>
