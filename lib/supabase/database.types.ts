@@ -22,7 +22,6 @@ export type Database = {
           created_at: string
           id: string
           long_description: string
-          score_table: string
           short_description: string
           title: string
         }
@@ -33,7 +32,6 @@ export type Database = {
           created_at?: string
           id: string
           long_description: string
-          score_table: string
           short_description: string
           title: string
         }
@@ -44,65 +42,52 @@ export type Database = {
           created_at?: string
           id?: string
           long_description?: string
-          score_table?: string
           short_description?: string
           title?: string
         }
         Relationships: []
       }
-      scores_asteroides: {
+      scores: {
         Row: {
           created_at: string
+          game_id: string
           id: string
           level: number
-          name: string
+          player_name: string
           score: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          game_id: string
           id?: string
           level: number
-          name: string
+          player_name: string
           score: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          game_id?: string
           id?: string
           level?: number
-          name?: string
+          player_name?: string
           score?: number
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scores_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      global_scores: {
-        Row: {
-          created_at: string | null
-          game_id: string | null
-          id: string | null
-          level: number | null
-          name: string | null
-          score: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          game_id?: never
-          id?: string | null
-          level?: number | null
-          name?: string | null
-          score?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          game_id?: never
-          id?: string | null
-          level?: number | null
-          name?: string | null
-          score?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
