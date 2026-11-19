@@ -7,47 +7,21 @@ import type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types"
 
 export type { GameStats, GlobalRankingRow, NewScore, ScoreEntry } from "./types";
 
-// gameId -> score table. A game without an entry has no saved scores (mock games).
-// Adding a game also means extending the `global_scores` view with its table.
-const SCORE_TABLES = {
-  asteroides: "scores_asteroides",
-} as const satisfies Record<string, keyof Database["public"]["Tables"]>;
+// Every game saves its scores in the single `scores` table, keyed by `game_id`
+// (a foreign key to `games.id`). A game without a row in `games` has no scores.
+type ScoreRow = Pick<
+  Database["public"]["Tables"]["scores"]["Row"],
+  "id" | "game_id" | "player_name" | "score" | "level" | "created_at"
+>;
 
-type ScoreGameId = keyof typeof SCORE_TABLES;
-type ScoreTable = (typeof SCORE_TABLES)[ScoreGameId];
+const SCORE_COLUMNS = "id, game_id, player_name, score, level, created_at";
 
-function getScoreTable(gameId: string): ScoreTable | null {
-  return Object.prototype.hasOwnProperty.call(SCORE_TABLES, gameId)
-    ? SCORE_TABLES[gameId as ScoreGameId]
-    : null;
-}
-
-// Shared shape of a row from a score table (non-null) and from `global_scores`
-// (every column nullable in the generated types).
-interface ScoreRow {
-  id: string | null;
-  name: string | null;
-  score: number | null;
-  level: number | null;
-  created_at: string | null;
-}
-
-/** Maps a database row to a ScoreEntry, or null when the row is incomplete. */
-function toScoreEntry(gameId: string | null, row: ScoreRow): ScoreEntry | null {
-  if (
-    gameId === null ||
-    row.id === null ||
-    row.name === null ||
-    row.score === null ||
-    row.level === null ||
-    row.created_at === null
-  ) {
-    return null;
-  }
+/** Maps a `scores` row to a ScoreEntry (`player_name` becomes `name`). */
+function toScoreEntry(row: ScoreRow): ScoreEntry {
   return {
     id: row.id,
-    gameId,
-    name: row.name,
+    gameId: row.game_id,
+    name: row.player_name,
     score: row.score,
     level: row.level,
     createdAt: row.created_at,
@@ -90,51 +64,47 @@ export async function saveScore(entry: NewScore): Promise<ScoreEntry> {
   const name = normalizeName(entry.name);
   if (!name) throw new Error("Player name is required");
 
-  const table = getScoreTable(entry.gameId);
-  if (!table) throw new Error(`No score table for game "${entry.gameId}"`);
-
   const { data, error } = await createClient()
-    .from(table)
+    .from("scores")
     .insert({
-      name,
+      game_id: entry.gameId,
+      player_name: name,
       score: Math.max(0, Math.floor(entry.score)),
       level: Math.max(1, Math.floor(entry.level)),
     })
-    .select()
+    .select(SCORE_COLUMNS)
     .single();
   if (error) throw error;
 
-  const saved = toScoreEntry(entry.gameId, data);
-  if (!saved) throw new Error("Saved score came back incomplete");
-  return saved;
+  return toScoreEntry(data);
 }
 
 export async function getGameScores(gameId: string, limit = 10): Promise<ScoreEntry[]> {
-  const table = getScoreTable(gameId);
-  if (!table) return [];
-
   const { data, error } = await createClient()
-    .from(table)
-    .select("id, name, score, level, created_at")
+    .from("scores")
+    .select(SCORE_COLUMNS)
+    .eq("game_id", gameId)
     .order("score", { ascending: false })
     .order("created_at", { ascending: true })
     .limit(limit);
   if (error) throw error;
 
-  return data.flatMap((row) => {
-    const entry = toScoreEntry(gameId, row);
-    return entry ? [entry] : [];
-  });
+  return data.map(toScoreEntry);
 }
 
 export async function getGameStats(gameId: string): Promise<GameStats> {
-  const table = getScoreTable(gameId);
-  if (!table) return { best: null, plays: 0 };
-
   const supabase = createClient();
   const [count, top] = await Promise.all([
-    supabase.from(table).select("id", { count: "exact", head: true }),
-    supabase.from(table).select("score").order("score", { ascending: false }).limit(1),
+    supabase
+      .from("scores")
+      .select("id", { count: "exact", head: true })
+      .eq("game_id", gameId),
+    supabase
+      .from("scores")
+      .select("score")
+      .eq("game_id", gameId)
+      .order("score", { ascending: false })
+      .limit(1),
   ]);
   if (count.error) throw count.error;
   if (top.error) throw top.error;
@@ -192,7 +162,7 @@ function rankPlayers(entries: ScoreEntry[], limit: number): GlobalRankingRow[] {
 }
 
 // PostgREST caps a single response (1000 rows by default), so rankings read the
-// view page by page to really rank every saved score.
+// table page by page to really rank every saved score.
 const RANKING_PAGE_SIZE = 1000;
 
 /** Every saved score across all games, optionally only those created since a date. */
@@ -201,9 +171,7 @@ async function fetchAllScores(since?: Date): Promise<ScoreEntry[]> {
   const entries: ScoreEntry[] = [];
 
   for (let from = 0; ; from += RANKING_PAGE_SIZE) {
-    let query = supabase
-      .from("global_scores")
-      .select("game_id, id, name, score, level, created_at");
+    let query = supabase.from("scores").select(SCORE_COLUMNS);
     if (since) query = query.gte("created_at", since.toISOString());
 
     const { data, error } = await query
@@ -212,10 +180,7 @@ async function fetchAllScores(since?: Date): Promise<ScoreEntry[]> {
       .range(from, from + RANKING_PAGE_SIZE - 1);
     if (error) throw error;
 
-    for (const row of data) {
-      const entry = toScoreEntry(row.game_id, row);
-      if (entry) entries.push(entry);
-    }
+    entries.push(...data.map(toScoreEntry));
     if (data.length < RANKING_PAGE_SIZE) return entries;
   }
 }
@@ -234,16 +199,13 @@ export async function getTodayRanking(limit = 5): Promise<GlobalRankingRow[]> {
 /** Latest saved scores across all games, newest first. */
 export async function getRecentScores(limit = 7): Promise<ScoreEntry[]> {
   const { data, error } = await createClient()
-    .from("global_scores")
-    .select("game_id, id, name, score, level, created_at")
+    .from("scores")
+    .select(SCORE_COLUMNS)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
 
-  return data.flatMap((row) => {
-    const entry = toScoreEntry(row.game_id, row);
-    return entry ? [entry] : [];
-  });
+  return data.map(toScoreEntry);
 }
 
 export function getLastPlayerName(): string {

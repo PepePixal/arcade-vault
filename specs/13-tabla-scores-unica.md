@@ -1,6 +1,6 @@
 # SPEC 13 — Tabla única `scores`
 
-> **Status:** Aprobada
+> **Status:** Implementada
 > **Depends on:** SPEC 09, SPEC 10, SPEC 11, SPEC 12
 > **Date:** 2026-11-19
 > **Objective:** Sustituir las tablas de puntuaciones por juego (`scores_asteroides`) por una única tabla `scores` que referencia a `games` mediante `game_id`, eliminando la vista `global_scores`, el mapa `SCORE_TABLES` y la columna `games.score_table`.
