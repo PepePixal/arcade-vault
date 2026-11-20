@@ -541,6 +541,22 @@ a { color: inherit; text-decoration: none; }
   image-rendering: pixelated;
 }
 
+.cover-arkanoid { background: radial-gradient(ellipse at 50% 100%, #3a3000, #0a0a12 70%); }
+.cover-arkanoid::after {
+  content: "";
+  position: absolute;
+  inset: 14% 12% 12% 12%;
+  background:
+    radial-gradient(circle, #fff 0 35%, transparent 40%) 62% 68%/9% 12% no-repeat,
+    linear-gradient(var(--cyan), var(--cyan)) 50% 100%/34% 7% no-repeat,
+    repeating-linear-gradient(90deg, var(--magenta) 0 18%, transparent 18% 20%) 0 0/100% 10% no-repeat,
+    repeating-linear-gradient(90deg, var(--yellow) 0 18%, transparent 18% 20%) 0 14%/100% 10% no-repeat,
+    repeating-linear-gradient(90deg, var(--cyan) 0 18%, transparent 18% 20%) 0 28%/100% 10% no-repeat,
+    repeating-linear-gradient(90deg, var(--green) 0 18%, transparent 18% 20%) 0 42%/100% 10% no-repeat;
+  filter: drop-shadow(0 0 8px rgba(255, 174, 0, 0.55));
+  image-rendering: pixelated;
+}
+
 .cover-rana { background: linear-gradient(180deg,#001f2a,#0a0a18); }
 .cover-rana::after {
   content: "";
@@ -736,7 +752,8 @@ a { color: inherit; text-decoration: none; }
 
 /* real in-screen game: 800x600 canvas scaled to fit the 4:3 CRT screen */
 .crt-screen .asteroids-canvas,
-.crt-screen .tetris-canvas {
+.crt-screen .tetris-canvas,
+.crt-screen .arkanoid-canvas {
   display: block;
   width: 100%;
   height: auto;
