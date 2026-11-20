@@ -13,6 +13,12 @@ Derivado de las specs 05, 06, 07, 09, 12 y 13. Verifica contra el código antes 
 | 12 | Catálogo leído desde Supabase (`lib/games.ts`) |
 | 13 | Tabla única `scores` (reemplaza 10 y 11) |
 
+Discrepancias conocidas entre specs y código (el código manda):
+
+- La spec 05 ubica el motor en `lib/games/asteroids/engine.ts` y el reproductor en `components/asteroids-player.tsx`. En el código real viven en `app/juego/asteroides/` (`engine.ts`, `asteroids-player.tsx`). Un juego nuevo sigue la ubicación real: `app/juego/<id>/`.
+- La spec 05 añade el juego a `GAMES` en `lib/data.ts`. La spec 12 eliminó `GAMES` y `CATS`: el catálogo sale de la tabla `games`. `lib/data.ts` solo conserva `Game`, `GameCategory`, `HomeStat` y `HOME_STATS`.
+- Las specs 09, 10 y 11 describen `games.score_table`, las tablas por juego y el mapa `gameId → tabla`. La spec 13 los eliminó. En concreto, la spec 11 pide que cada juego nuevo amplíe ese mapa y la vista `global_scores`: ya no aplica. Un juego nuevo solo inserta su fila en `games`.
+
 ## Código a inspeccionar
 
 - `app/juego/asteroides/engine.ts`, `asteroids-player.tsx`, `jugar/page.tsx`

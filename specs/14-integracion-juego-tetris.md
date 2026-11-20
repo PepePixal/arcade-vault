@@ -1,6 +1,6 @@
 # SPEC 14 — Integración del juego Tetris
 
-> **Status:** Aprobada
+> **Status:** Implementada
 > **Depends on:** SPEC 05, SPEC 06, SPEC 07, SPEC 09, SPEC 12, SPEC 13
 > **Date:** 2026-11-20
 > **Objective:** Integrar el juego Tetris de `references/started-games/03-tetris/` como el juego jugable "TETRIS" de Arcade Vault, con tarjeta en `/juego`, detalle en `/juego/tetris` y partida en `/juego/tetris/jugar` dentro del CRT de la plataforma, enviando puntuación, vidas y nivel al HUD y guardando la puntuación en `scores`.
