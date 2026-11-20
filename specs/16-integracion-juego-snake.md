@@ -1,6 +1,6 @@
 # SPEC 16 — Integración del juego Snake
 
-> **Status:** Borrador
+> **Status:** Aprobado
 > **Depends on:** SPEC 05, SPEC 06, SPEC 07, SPEC 09, SPEC 12, SPEC 13, SPEC 14, SPEC 15
 > **Date:** 2026-11-20
 > **Objective:** Crear el juego Snake desde cero e integrarlo como el juego jugable "SNAKE" de Arcade Vault, con tarjeta en `/juego`, detalle en `/juego/snake` y partida en `/juego/snake/jugar` dentro del CRT de la plataforma, enviando puntuación, vidas y nivel al HUD y guardando la puntuación en `scores`.
