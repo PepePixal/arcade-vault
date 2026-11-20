@@ -11,6 +11,11 @@ export default function Library({ games }: { games: Game[] }) {
   // "TODOS" plus the categories that have at least one game.
   const categories = ["TODOS", ...new Set(games.map((g) => g.cat))];
 
+  const query = q.trim().toLowerCase();
+  const filtered = games.filter(
+    (g) => (cat === "TODOS" || g.cat === cat) && g.title.toLowerCase().includes(query),
+  );
+
   return (
     <div className="fade-in">
       <section className="av-hero">
@@ -34,11 +39,17 @@ export default function Library({ games }: { games: Game[] }) {
         </div>
       </div>
 
-      <div className="av-grid">
-        {games.map((g) => (
-          <GameCard key={g.id} game={g} />
-        ))}
-      </div>
+      {filtered.length === 0 ? (
+        <div className="lb-empty">
+          <p className="lb-empty-title">NINGÚN JUEGO ENCONTRADO</p>
+        </div>
+      ) : (
+        <div className="av-grid">
+          {filtered.map((g) => (
+            <GameCard key={g.id} game={g} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
