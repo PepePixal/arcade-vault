@@ -105,8 +105,9 @@ Project agents in `.claude/agents/`:
 | Agent | What it does |
 |-------|-------------|
 | `game-planner` | Plans and decides which new game fits the platform. Reads the real catalog, scores 1–3 candidates (main weight: category diversity, 2D canvas feasibility, recognition as a classic) and recommends one. Its memory is the To Do list `references/game-suggestions-todo.md` (`[ ]` pending, `[x]` implemented, `[-]` discarded); it reads it before suggesting and never repeats a pending or discarded game. Never writes code or specs; next step is `/add-game <id>`. |
+| `game-jam` | Invents a new original game from a given theme and writes two alternative specs of the same game (same `id` and integration contract, different game design: mechanics, controls, scoring, lives/level mapping, visual style) in `specs/game-jam/<game-id>/spec-a-<slug>.md` and `spec-b-<slug>.md`, with status `Borrador` and no `NN` number. Never writes code. Next step: pick one, move it to `specs/NN-<slug>.md`, approve it and run `/spec-impl`. |
 
-Typical flow: `game-planner` (choose the game) → `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`.
+Typical flow: `game-planner` (choose the game) → `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`. Game jam flow: `game-jam` with a theme → pick spec A or B → move it to `specs/NN-<slug>.md` → approve → `/spec-impl`.
 
 Other conventions:
 - **Always use `/frontend-design` to design the user interface.**
