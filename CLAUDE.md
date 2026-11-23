@@ -4,30 +4,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Arcade Vault** is an online gaming platform for competitive play, where users compete for the highest score. The project uses **Spec-Driven Development** (SDD) as its methodology, following the [fernando-skills](https://github.com/Klerith/fernando-skills) practices.
+**Arcade Vault** is an online gaming platform where players compete for the highest score. It ships four playable browser games (Asteroides, Tetris, Arkanoid, Snake), per-game leaderboards and stats, a global Hall of Fame, and live activity on the home page, all backed by **Supabase**.
+
+The project follows **Spec-Driven Development** using the [fernando-skills](https://github.com/Klerith/fernando-skills) practices (`/spec` and `/spec-impl`). UI copy and routes are in Spanish; code, identifiers and comments are in English.
 
 ## Tech Stack
 
-- **Next.js 16.3.4** with App Router (`app/` directory)
-- **React 19.2.8** (latest)
-- **TypeScript** (strict mode) with ES2017 target
-- **Tailwind CSS 4** with PostCSS
-- **ESLint 9** with Next.js config (web vitals + TypeScript)
-
+- **Next.js 16.3.4** with App Router (`app/`)
+- **React 19.2.8**
+- **TypeScript** (strict mode, ES2017 target)
+- **Tailwind CSS 4** via `@tailwindcss/postcss`
+- **Supabase** (`@supabase/ssr`, `@supabase/supabase-js`): Postgres database for games and scores
+- **Resend**: contact form emails (`app/api/contact/route.ts`)
+- **ESLint 9** (flat config, Next.js web vitals + TypeScript)
 
 ## Project Structure
 
 ```
 app/
-├── layout.tsx          # Root layout with metadata, font setup (Geist)
-├── page.tsx            # Home page
-└── globals.css         # Global styles (Tailwind directives)
+├── layout.tsx, page.tsx, globals.css, error.tsx
+├── acerca-de/             # About + contact form
+├── api/contact/route.ts   # POST: sends the contact form through Resend
+├── auth/                  # Auth screen
+├── juego/
+│   ├── page.tsx           # Game library (search + category filters)
+│   ├── [id]/page.tsx      # Game detail: stats + leaderboard (reads `games`)
+│   └── <game>/            # One folder per game: asteroides, tetris, arkanoid, snake
+│       ├── engine.ts      # Pure canvas engine
+│       ├── <game>-player.tsx  # Client player: HUD, controls, game over modal
+│       └── jugar/page.tsx # Server page: getGame(id) → notFound() or player
+├── salon-de-la-fama/      # Global Hall of Fame
+└── supabase-check/        # Supabase connectivity diagnostic page
 
-public/                 # Static assets (next.svg, vercel.svg, etc.)
-eslint.config.mjs       # ESLint config (flat config format)
-tsconfig.json           # TypeScript with path alias @/* -> ./
-next.config.ts          # Next.js config (currently empty)
-AGENTS.md               # Important Next.js 16 breaking changes
+components/
+├── games/      # game-card, library, game-leaderboard, game-stats, game-over-modal, use-game-stats
+├── hall-of-fame/
+├── home/       # home-view, home-activity (real recent activity)
+└── layout/nav.tsx
+
+lib/
+├── data.ts         # Game / GameCategory types, HOME_STATS
+├── games.ts        # Game catalog from the `games` table (SERVER ONLY)
+├── scores/         # Public score API (client): saveScore, getGameScores, getGameStats,
+│                   # getGlobalRanking, getTodayRanking, getRecentScores, player-name helpers
+└── supabase/       # client.ts (browser), server.ts (cookies), middleware.ts, database.types.ts
+
+proxy.ts            # Next 16 "proxy" (former middleware): refreshes the Supabase session
+specs/              # Numbered specs NN-slug.md + .spec-config.yml
+supabase/migrations/  # SQL migrations (games, scores, privileges, one row per game)
+references/         # Design templates, original started-games, source assets (not built)
 ```
 
 ## Important: Next.js 16 Breaking Changes
@@ -38,77 +63,83 @@ This project uses **Next.js 16.3.4**, which has **breaking changes** from earlie
 2. Check `node_modules/next/dist/docs/` for up-to-date Next.js API documentation
 3. Pay attention to deprecation notices—APIs and conventions differ from training data
 
-Do NOT rely on older Next.js patterns. Always verify in the project's local Next.js docs.
+Known example: middleware lives in `proxy.ts` and exports `proxy()`, not `middleware()`. Route `params` are a `Promise` and must be awaited.
+
+## Data Layer (Supabase)
+
+- **`games`** table: the game catalog (`id, title, short_description, long_description, category, cover, color`). `category` ∈ `ARCADE|PUZZLE|SHOOTER|VERSUS`, `color` ∈ `cyan|magenta|green|yellow`. Library, detail page, home and Hall of Fame all read it.
+- **`scores`** table: single shared table for every game, filtered by `game_id` (FK to `games.id`). Constraints: `score >= 0`, `level >= 1`. Per-game score tables and `games.score_table` no longer exist (removed in spec 13).
+- `lib/games.ts` uses the cookie-based server client → import it only from server components.
+- `lib/scores` uses the browser client → components depend only on its async functions, never on Supabase directly. Only the last player name stays in `localStorage`.
+- Regenerate `lib/supabase/database.types.ts` after schema changes (Supabase MCP `generate_typescript_types`).
+- Supabase MCP is configured in `.mcp.json`. **Applying a migration to the remote project requires explicit user confirmation.** Run Supabase advisors after any migration.
+
+### Environment variables
+
+Copy `.env.template` to `.env.local` (gitignored, never commit it):
+
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`, `CONTACT_TO_EMAIL`.
+
+## Game Integration Pattern
+
+Every game follows the same contract (full detail in `.claude/skills/add-game/references/integration-blueprint.md`; the code wins over that file):
+
+1. **Engine** `app/juego/<id>/engine.ts`: factory `createXGame(canvas, callbacks)` returning `start, pause, resume, end, restart, destroy`. Callbacks: `onStats`, `onStatus`, `onGameOver`. No module globals, no Supabase or `lib/data.ts` imports. Fixed internal canvas resolution, scaled by CSS.
+2. **Player + page**: `<id>-player.tsx` (client, platform HUD, PAUSA / FIN / SALIR, `GameOverModal`, `saveScore`) and `jugar/page.tsx` (server, `getGame(id)` + `notFound()`).
+3. **Catalog**: one migration inserting the row in `public.games`. No new route and no new score table.
+4. **Styles**: `.cover-<id>` in `app/globals.css`; the canvas fits `.crt-screen`. Game assets go in `public/<id>/`.
+
+## Development Workflow: Spec-Driven Development
+
+Specs live in `specs/NN-slug.md` (currently 01–16). Project skills in `.claude/skills/`:
+
+| Command | What it does |
+|---------|-------------|
+| `/spec <feature>` | Guided spec designer. Asks clarifying questions, builds the spec section by section from `template.md`, saves it with state `Borrador`. Never writes code. |
+| `/spec-impl <NN-slug>` | Implements a spec only if its state means "Approved". Creates/switches to branch `spec-NN-slug` (controlled by `AutoCreateBranch` in `specs/.spec-config.yml`) and implements step by step with diff review pauses. |
+| `/add-game <name>` | Generates ONLY the spec to integrate a new game (from `references/started-games/` or from scratch), following the integration blueprint. |
+
+Typical flow: `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`.
+
+Other conventions:
+- **Always use `/frontend-design` to design the user interface.**
+- Commits: conventional commits (or the project's `spec-NN-...` style), never AI attribution.
+
+## Verification
+
+Before closing a spec or PR:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Plus a manual walkthrough of the affected flow (e.g. for a game: library → detail → play → game over → save → leaderboard → exit). There is no automated test suite yet.
 
 ## TypeScript & Aliases
 
 - **Path alias**: `@/*` → `./` (project root)
 - **Strict mode**: Enabled (`noEmit: true`, `strict: true`)
 - **jsx**: `react-jsx` (no `React` import needed)
-
-## Development Workflow: Spec-Driven Design
-
-This project follows SDD. Workflow:
-
-1. **Explore** — investigate the problem and codebase
-2. **Propose** — define the solution and its scope
-3. **Spec** — write formal requirements and test scenarios
-4. **Design** — describe architecture and approach
-5. **Tasks** — break work into atomic, ordered items
-6. **Apply** — implement following the spec and design
-7. **Verify** — validate against spec; archive when done
-
-Use `/sdd-*` commands in Claude Code (e.g., `/sdd-explore`, `/sdd-new`) to run phases.
+- No `any` without justification; narrow DB string columns to union types (see `lib/games.ts`).
 
 ## Styling & Theme
 
-- Uses **Tailwind CSS 4** with the newer @tailwindcss/postcss plugin
-- Layout has dark mode support (`.dark:` utilities)
-- Geist font family (sans and mono variants from Google Fonts)
-- Global styles in `app/globals.css`
-
-## Linting
-
-ESLint uses flat config format:
-
-```bash
-npm run lint
-```
-
-Config loads Next.js web-vitals and TypeScript rules from `eslint-config-next`. Global ignores: `.next/`, `out/`, `build/`, `next-env.d.ts`.
-
-## Metadata & Build
-
-- Home page metadata in `app/layout.tsx` (title, description)
-- Build output goes to `.next/` (git-ignored)
-- Static assets served from `public/`
-- Always use /frontend-design to design the user interface.
+- Tailwind CSS 4 plus custom retro/CRT classes in `app/globals.css` (`.cover-*`, `.crt-screen`, per-game canvas classes)
+- Geist font family (sans and mono)
+- Visual references in `references/templates/`
 
 ## Common Tasks
 
+### Run the app
+```bash
+npm run dev   # http://localhost:3000
+```
+
 ### Add a new page
-1. Create `app/[route]/page.tsx`
-2. Export a default React component
-3. Optionally add route-level metadata via `generateMetadata()` or `metadata`
+1. Create `app/[route]/page.tsx` exporting a default component
+2. Optionally add `metadata` or `generateMetadata()`
 
-### Run TypeScript check
-```bash
-npx tsc --noEmit
-```
-
-### View ESLint violations
-```bash
-npm run lint
-```
-
-### Update dependencies
-```bash
-npm install
-```
-
-## Notes for Future Work
-
-- The project is freshly initialized from Create Next App. Core app structure is minimal.
-- Focus on implementing game features per SDD specs.
-- Remember to test against the breaking changes listed in AGENTS.md.
-- Use TypeScript strictly—no `any` types without justification.
+### Add a new game
+Run `/add-game <name>`, approve the spec, then `/spec-impl <NN-slug>`.
