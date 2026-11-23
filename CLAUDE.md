@@ -52,7 +52,8 @@ lib/
 proxy.ts            # Next 16 "proxy" (former middleware): refreshes the Supabase session
 specs/              # Numbered specs NN-slug.md + .spec-config.yml
 supabase/migrations/  # SQL migrations (games, scores, privileges, one row per game)
-references/         # Design templates, original started-games, source assets (not built)
+references/         # Design templates, original started-games, source assets (not built),
+                    # implemented-games.md, game-suggestions-todo.md (game-planner memory)
 ```
 
 ## Important: Next.js 16 Breaking Changes
@@ -99,7 +100,13 @@ Specs live in `specs/NN-slug.md` (currently 01–16). Project skills in `.claude
 | `/spec-impl <NN-slug>` | Implements a spec only if its state means "Approved". Creates/switches to branch `spec-NN-slug` (controlled by `AutoCreateBranch` in `specs/.spec-config.yml`) and implements step by step with diff review pauses. |
 | `/add-game <name>` | Generates ONLY the spec to integrate a new game (from `references/started-games/` or from scratch), following the integration blueprint. |
 
-Typical flow: `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`.
+Project agents in `.claude/agents/`:
+
+| Agent | What it does |
+|-------|-------------|
+| `game-planner` | Plans and decides which new game fits the platform. Reads the real catalog, scores 1–3 candidates (main weight: category diversity, 2D canvas feasibility, recognition as a classic) and recommends one. Its memory is the To Do list `references/game-suggestions-todo.md` (`[ ]` pending, `[x]` implemented, `[-]` discarded); it reads it before suggesting and never repeats a pending or discarded game. Never writes code or specs; next step is `/add-game <id>`. |
+
+Typical flow: `game-planner` (choose the game) → `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`.
 
 Other conventions:
 - **Always use `/frontend-design` to design the user interface.**
@@ -142,4 +149,4 @@ npm run dev   # http://localhost:3000
 2. Optionally add `metadata` or `generateMetadata()`
 
 ### Add a new game
-Run `/add-game <name>`, approve the spec, then `/spec-impl <NN-slug>`.
+Optionally ask the `game-planner` agent which game to add, then run `/add-game <name>`, approve the spec, then `/spec-impl <NN-slug>`.
