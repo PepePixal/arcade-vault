@@ -3,6 +3,7 @@
 // loop and the keyboard/mouse listeners are created in start() and released in destroy().
 
 import { LEVELS } from "./levels";
+import { SKINS, type ArkanoidPalette, type BrickColor } from "./skins";
 
 export type ArkanoidStatus = "playing" | "paused" | "gameover";
 
@@ -25,6 +26,12 @@ export interface ArkanoidGame {
   end(): void; // forces game over (FIN button)
   restart(): void; // new game: score 0, level 1, 3 lives
   destroy(): void; // cancels the loop and removes listeners
+  /** Swaps the palette without touching the game state. */
+  setSkin(palette: ArkanoidPalette): void;
+}
+
+export interface ArkanoidOptions {
+  palette?: ArkanoidPalette;
 }
 
 const PADDLE_HEIGHT = 14;
@@ -40,7 +47,6 @@ const BRICK_HEIGHT = 28;
 const BRICK_GAP = 4;
 const BRICK_OFFSET_TOP = 60;
 
-type BrickColor = "red" | "yellow" | "cyan" | "magenta" | "hotpink" | "green";
 const BRICK_COLORS: BrickColor[] = ["red", "yellow", "cyan", "magenta", "hotpink", "green"];
 
 const EXPLOSION_DURATION_MS = 150;
@@ -78,16 +84,6 @@ function blockSprite(color: BrickColor): SpriteRect {
 function explosionSprite(color: BrickColor, frameIndex: number): SpriteRect {
   return { sx: 256 + frameIndex * 32, sy: BRICK_SPRITE_ROW[color], sw: 32, sh: 16 };
 }
-
-// Used when the spritesheet has not loaded (or failed to load).
-const BRICK_FILL: Record<BrickColor, string> = {
-  red: "#ff3b30",
-  yellow: "#ffae00",
-  cyan: "#00f5ff",
-  magenta: "#ff00e5",
-  hotpink: "#ff69b4",
-  green: "#00ff88",
-};
 
 // Game speeds are expressed in px per step at 60 steps per second.
 const STEP_MS = 1000 / 60;
@@ -129,8 +125,10 @@ interface Ball {
 export function createArkanoidGame(
   canvas: HTMLCanvasElement,
   callbacks: ArkanoidCallbacks,
+  options?: ArkanoidOptions,
 ): ArkanoidGame {
   const ctx = canvas.getContext("2d");
+  let palette: ArkanoidPalette = options?.palette ?? SKINS.clasico;
   const width = canvas.width;
   const height = canvas.height;
 
@@ -424,61 +422,106 @@ export function createArkanoidGame(
     if (status === "playing") checkWinCondition();
   }
 
-  // Draws a spritesheet region; without the image, falls back to plain shapes.
-  function drawSprite(
-    img: HTMLImageElement | null,
-    sprite: SpriteRect,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
+  // Sprite sheet in use: only when the skin asks for it and the image has loaded.
+  function activeSheet(): HTMLImageElement | null {
+    return palette.useSprites ? spritesheet : null;
+  }
+
+  function drawFromSheet(img: HTMLImageElement, sprite: SpriteRect, x: number, y: number, w: number, h: number): void {
+    ctx?.drawImage(img, sprite.sx, sprite.sy, sprite.sw, sprite.sh, x, y, w, h);
+  }
+
+  // Glow for entities only; always reset afterwards so background and text stay crisp.
+  function withGlow(color: string, draw: (g: CanvasRenderingContext2D) => void): void {
     if (!ctx) return;
-    if (img) {
-      ctx.drawImage(img, sprite.sx, sprite.sy, sprite.sw, sprite.sh, x, y, w, h);
+    if (palette.glow > 0) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = palette.glow;
+    }
+    draw(ctx);
+    ctx.shadowBlur = 0;
+  }
+
+  function drawPaddle(): void {
+    const sheet = activeSheet();
+    if (sheet) {
+      drawFromSheet(sheet, PADDLE_SPRITE, paddle.x, paddle.y, paddle.width, paddle.height);
       return;
     }
-    if (sprite === PADDLE_SPRITE) {
-      ctx.fillStyle = "#00f5ff";
-      ctx.fillRect(x, y, w, h);
-    } else if (sprite === BALL_SPRITE) {
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (sprite.sx >= 256) {
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.fillRect(x, y, w, h);
-    } else {
-      ctx.fillStyle = fallbackColor(sprite.sy);
-      ctx.fillRect(x, y, w, h);
+    withGlow(palette.paddle, (g) => {
+      g.fillStyle = palette.paddle;
+      g.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    });
+  }
+
+  function drawBall(): void {
+    const x = ball.x - ball.radius;
+    const y = ball.y - ball.radius;
+    const size = ball.radius * 2;
+    const sheet = activeSheet();
+    if (sheet) {
+      drawFromSheet(sheet, BALL_SPRITE, x, y, size, size);
+      return;
+    }
+    withGlow(palette.ball, (g) => {
+      g.fillStyle = palette.ball;
+      g.beginPath();
+      g.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  function drawBrick(brick: Brick): void {
+    const sheet = activeSheet();
+    if (sheet) {
+      drawFromSheet(sheet, blockSprite(brick.color), brick.x, brick.y, brick.width, brick.height);
+      return;
+    }
+    if (!ctx) return;
+    const style = palette.bricks[brick.color];
+    ctx.fillStyle = style.fill;
+    ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+    const stroke = style.stroke;
+    if (stroke && palette.brickLineWidth > 0) {
+      const lw = palette.brickLineWidth;
+      withGlow(stroke, (g) => {
+        g.strokeStyle = stroke;
+        g.lineWidth = lw;
+        g.strokeRect(brick.x + lw / 2, brick.y + lw / 2, brick.width - lw, brick.height - lw);
+      });
     }
   }
 
-  function fallbackColor(spriteRow: number): string {
-    const color = BRICK_COLORS.find((c) => BRICK_SPRITE_ROW[c] === spriteRow);
-    return color ? BRICK_FILL[color] : "#fff";
+  function drawExplosion(explosion: Explosion, frameIndex: number): void {
+    const sheet = activeSheet();
+    if (sheet) {
+      drawFromSheet(
+        sheet,
+        explosionSprite(explosion.color, frameIndex),
+        explosion.x,
+        explosion.y,
+        explosion.width,
+        explosion.height,
+      );
+      return;
+    }
+    if (!ctx) return;
+    ctx.fillStyle = palette.explosion;
+    ctx.fillRect(explosion.x, explosion.y, explosion.width, explosion.height);
   }
 
   function render(): void {
     if (!ctx) return;
 
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = palette.background;
     ctx.fillRect(0, 0, width, height);
 
-    drawSprite(spritesheet, PADDLE_SPRITE, paddle.x, paddle.y, paddle.width, paddle.height);
-    drawSprite(
-      spritesheet,
-      BALL_SPRITE,
-      ball.x - ball.radius,
-      ball.y - ball.radius,
-      ball.radius * 2,
-      ball.radius * 2,
-    );
+    drawPaddle();
+    drawBall();
 
     for (const brick of bricks) {
       if (!brick.active) continue;
-      drawSprite(spritesheet, blockSprite(brick.color), brick.x, brick.y, brick.width, brick.height);
+      drawBrick(brick);
     }
 
     for (const explosion of explosions) {
@@ -487,20 +530,13 @@ export function createArkanoidGame(
         EXPLOSION_FRAME_COUNT - 1,
         Math.floor(elapsed / (EXPLOSION_DURATION_MS / EXPLOSION_FRAME_COUNT)),
       );
-      drawSprite(
-        spritesheet,
-        explosionSprite(explosion.color, frameIndex),
-        explosion.x,
-        explosion.y,
-        explosion.width,
-        explosion.height,
-      );
+      drawExplosion(explosion, frameIndex);
     }
 
     if (levelCompleteAt !== null) {
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillStyle = palette.overlay;
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = palette.text;
       ctx.font = "40px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`Nivel ${level} completado`, width / 2, height / 2);
@@ -638,6 +674,13 @@ export function createArkanoidGame(
       canvas.removeEventListener("click", onClick);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+    },
+
+    setSkin(next: ArkanoidPalette): void {
+      palette = next;
+      // The loop repaints every frame (also while paused or over); repaint now too
+      // so the change shows immediately.
+      if (started && !destroyed) render();
     },
   };
 }

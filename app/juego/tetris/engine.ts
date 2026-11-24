@@ -3,6 +3,8 @@
 // keyboard listeners are attached in start() and removed in destroy().
 // It knows nothing about the platform; it only reports through callbacks.
 
+import { SKINS, type TetrisPalette } from "./skins";
+
 export type TetrisStatus = "playing" | "paused" | "gameover";
 
 export interface TetrisStats {
@@ -24,6 +26,12 @@ export interface TetrisGame {
   end(): void; // forces game over (FIN button)
   restart(): void; // new game: 1 life, level 1, score 0
   destroy(): void; // cancels the loop and removes listeners
+  /** Swaps the palette without touching the game state. */
+  setSkin(palette: TetrisPalette): void;
+}
+
+export interface TetrisOptions {
+  palette?: TetrisPalette;
 }
 
 // Canvas is 4:3 and scaled by CSS; the 10x20 board sits centered with the next piece beside it.
@@ -45,18 +53,8 @@ const MAX_DT_MS = 50;
 const LINES_PER_LEVEL = 10;
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
-// Index 0 is "empty"; 1..7 are the seven standard pieces (I, O, T, S, Z, J, L).
-const COLORS: readonly (string | null)[] = [
-  null,
-  "#4dd0e1", // I
-  "#ffd54f", // O
-  "#ba68c8", // T
-  "#81c784", // S
-  "#e57373", // Z
-  "#8b0000", // J
-  "#ffb74d", // L
-];
-
+// Cell value 0 is "empty"; 1..7 are the seven standard pieces (I, O, T, S, Z, J, L).
+// Their colors live in the active skin palette (palette.pieces[value - 1]).
 const PIECES: readonly (readonly (readonly number[])[])[] = [
   [],
   [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
@@ -106,10 +104,14 @@ function rotateCW(shape: Shape): Shape {
 export function createTetrisGame(
   canvas: HTMLCanvasElement,
   callbacks: TetrisCallbacks,
+  options?: TetrisOptions,
 ): TetrisGame {
   const maybeCtx = canvas.getContext("2d");
   if (!maybeCtx) throw new Error("Tetris: 2D canvas context is not available");
   const ctx: CanvasRenderingContext2D = maybeCtx;
+
+  // Active skin; only read by the drawing code.
+  let palette: TetrisPalette = options?.palette ?? SKINS.clasico;
 
   // ── Game state ──
   let board = createBoard();
@@ -302,20 +304,56 @@ export function createTetrisGame(
     py: number,
     colorIndex: number,
     alpha = 1,
+    backdrop: string = palette.board, // color behind the block, for hollow patterns
   ): void {
-    const color = COLORS[colorIndex];
-    if (!color) return;
+    if (colorIndex < 1 || colorIndex > PIECE_TYPES) return;
+    const color = palette.pieces[colorIndex - 1];
+    const pattern = palette.patterns[colorIndex - 1];
     const s = BLOCK - 2;
+    const x = px + 1;
+    const y = py + 1;
+
+    target.save();
     target.globalAlpha = alpha;
-    target.fillStyle = color;
-    target.fillRect(px + 1, py + 1, s, s);
-    target.fillStyle = "rgba(255,255,255,0.12)";
-    target.fillRect(px + 1, py + 1, s, 4);
+    // Glow only on solid entities, never on the ghost preview.
+    if (palette.glow > 0 && alpha === 1) {
+      target.shadowColor = color;
+      target.shadowBlur = palette.glow;
+    }
+
+    if (pattern === "tube") {
+      target.globalAlpha = alpha * 0.25;
+      target.fillStyle = color;
+      target.fillRect(x, y, s, s);
+      target.globalAlpha = alpha;
+      target.strokeStyle = color;
+      target.lineWidth = 2;
+      target.strokeRect(x + 2, y + 2, s - 4, s - 4);
+    } else {
+      target.fillStyle = color;
+      target.fillRect(x, y, s, s);
+      if (pattern === "frame") {
+        // Hollow ring with a colored core, like 8-bit console blocks.
+        target.shadowBlur = 0;
+        target.fillStyle = backdrop;
+        target.fillRect(x + 5, y + 5, s - 10, s - 10);
+        target.fillStyle = color;
+        target.fillRect(x + 10, y + 10, s - 20, s - 20);
+      }
+    }
+
+    if (palette.highlight) {
+      target.shadowBlur = 0;
+      target.fillStyle = palette.highlight;
+      target.fillRect(x, y, s, 4);
+    }
+    target.restore();
+    target.shadowBlur = 0;
     target.globalAlpha = 1;
   }
 
   function drawGrid(): void {
-    ctx.strokeStyle = "#22222e";
+    ctx.strokeStyle = palette.grid;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (let c = 1; c < COLS; c++) {
@@ -345,12 +383,12 @@ export function createTetrisGame(
   }
 
   function drawNext(): void {
-    ctx.fillStyle = "#8a8aa3";
+    ctx.fillStyle = palette.label;
     ctx.font = "14px monospace";
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText("SIGUIENTE", NEXT_X, NEXT_Y - 12);
-    ctx.strokeStyle = "#3a3a52";
+    ctx.strokeStyle = palette.frame;
     ctx.lineWidth = 1;
     ctx.strokeRect(NEXT_X, NEXT_Y, NEXT_BOX, NEXT_BOX);
 
@@ -359,17 +397,24 @@ export function createTetrisGame(
     const offY = Math.floor((4 - shape.length) / 2);
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
-        drawBlock(ctx, NEXT_X + (offX + c) * BLOCK, NEXT_Y + (offY + r) * BLOCK, shape[r][c]);
+        drawBlock(
+          ctx,
+          NEXT_X + (offX + c) * BLOCK,
+          NEXT_Y + (offY + r) * BLOCK,
+          shape[r][c],
+          1,
+          palette.background,
+        );
       }
     }
   }
 
   function draw(): void {
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#05050f";
+    ctx.fillStyle = palette.background;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = "#0a0a18";
+    ctx.fillStyle = palette.board;
     ctx.fillRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H);
     drawGrid();
 
@@ -379,10 +424,10 @@ export function createTetrisGame(
       }
     }
 
-    if (!over) drawPiece(current, ghostY(), 0.2);
+    if (!over) drawPiece(current, ghostY(), palette.ghostAlpha);
     drawPiece(current, current.y, 1);
 
-    ctx.strokeStyle = "#3a3a52";
+    ctx.strokeStyle = palette.frame;
     ctx.lineWidth = 2;
     ctx.strokeRect(BOARD_X - 1, BOARD_Y - 1, BOARD_W + 2, BOARD_H + 2);
 
@@ -465,6 +510,12 @@ export function createTetrisGame(
       stopLoop();
       listenTarget?.removeEventListener("keydown", onKeyDown);
       listenTarget = null;
+    },
+
+    setSkin(next: TetrisPalette): void {
+      palette = next;
+      // While playing the loop repaints on its own; when paused or over it is stopped.
+      if (started && !destroyed && (paused || over)) draw();
     },
   };
 }
