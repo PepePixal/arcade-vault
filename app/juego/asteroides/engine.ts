@@ -3,6 +3,8 @@
 // keyboard listeners are attached in start() and removed in destroy().
 // It knows nothing about the platform; it only reports through callbacks.
 
+import { SKINS, type AsteroidsPalette } from "./skins";
+
 export type AsteroidsStatus = "playing" | "paused" | "gameover";
 
 export interface AsteroidsStats {
@@ -24,6 +26,12 @@ export interface AsteroidsGame {
   end(): void; // forces game over (FIN button)
   restart(): void; // new game: 3 lives, level 1, score 0
   destroy(): void; // cancels the loop and removes listeners
+  /** Swaps the palette without touching the game state. */
+  setSkin(palette: AsteroidsPalette): void;
+}
+
+export interface AsteroidsOptions {
+  palette?: AsteroidsPalette;
 }
 
 const W = 800;
@@ -40,6 +48,13 @@ const wrap = (v: number, max: number): number => ((v % max) + max) % max;
 const dist = (a: Point, b: Point): number => Math.hypot(a.x - b.x, a.y - b.y);
 const rand = (min: number, max: number): number => min + Math.random() * (max - min);
 const randInt = (min: number, max: number): number => Math.floor(rand(min, max + 1));
+
+// Glow is only applied to entities; callers reset shadowBlur afterwards.
+function applyGlow(ctx: CanvasRenderingContext2D, color: string, blur: number): void {
+  if (blur <= 0) return;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+}
 
 // ── Bullet ──────────────────────────────────────────────────────────────────
 class Bullet {
@@ -66,11 +81,13 @@ class Bullet {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = "#fff";
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
+    applyGlow(ctx, p.bullet, p.glow);
+    ctx.fillStyle = p.bullet;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -126,12 +143,13 @@ class Asteroid {
     return [new Asteroid(this.x, this.y, next), new Asteroid(this.x, this.y, next)];
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1.5;
+    applyGlow(ctx, p.asteroid, p.glow);
+    ctx.strokeStyle = p.asteroid;
+    ctx.lineWidth = p.lineWidth;
     ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(this.verts[0][0], this.verts[0][1]);
@@ -139,6 +157,7 @@ class Asteroid {
     ctx.closePath();
     ctx.stroke();
     ctx.restore();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -174,16 +193,17 @@ abstract class BasePowerUp {
     ctx.globalAlpha = alpha;
   }
 
-  abstract draw(ctx: CanvasRenderingContext2D): void;
+  abstract draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void;
 }
 
 class PowerUp extends BasePowerUp {
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
     this.begin(ctx);
+    applyGlow(ctx, p.tripleShot, p.glow);
 
     // Outer ring
-    ctx.strokeStyle = "#0ff";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = p.tripleShot;
+    ctx.lineWidth = p.lineWidth;
     ctx.beginPath();
     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
     ctx.stroke();
@@ -198,33 +218,36 @@ class PowerUp extends BasePowerUp {
     }
 
     // Center dot
-    ctx.fillStyle = "#0ff";
+    ctx.fillStyle = p.tripleShot;
     ctx.beginPath();
     ctx.arc(0, 0, 3, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
+    ctx.shadowBlur = 0;
   }
 }
 
 class ShieldPowerUp extends BasePowerUp {
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
     this.begin(ctx);
+    applyGlow(ctx, p.shield, p.glow);
 
     // Outer ring
-    ctx.strokeStyle = "#f80";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = p.shield;
+    ctx.lineWidth = p.lineWidth;
     ctx.beginPath();
     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
     ctx.stroke();
 
     // Center dot
-    ctx.fillStyle = "#f80";
+    ctx.fillStyle = p.shield;
     ctx.beginPath();
     ctx.arc(0, 0, 3, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -308,7 +331,7 @@ class Ship {
     return [new Bullet(ox, oy, this.angle)];
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
     if (this.dead) return;
     // Blink while respawn-invincible
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
@@ -316,8 +339,9 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1.5;
+    applyGlow(ctx, p.ship, p.glow);
+    ctx.strokeStyle = p.ship;
+    ctx.lineWidth = p.lineWidth;
     ctx.lineJoin = "round";
 
     // Classic silhouette: triangle with rear notch
@@ -335,13 +359,13 @@ class Ship {
       ctx.moveTo(-8, -4);
       ctx.lineTo(-8 - rand(6, 14), 0);
       ctx.lineTo(-8, 4);
-      ctx.strokeStyle = "rgba(255, 130, 0, 0.85)";
+      ctx.strokeStyle = p.thrust;
       ctx.stroke();
     }
 
     // Triple shot indicator
     if (this.tripleShot) {
-      ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+      ctx.fillStyle = p.tripleIndicator;
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
         ctx.arc(14 + i * 6, 0, 2, 0, Math.PI * 2);
@@ -350,6 +374,7 @@ class Ship {
     }
 
     ctx.restore();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -381,9 +406,9 @@ class Particle {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, p: AsteroidsPalette): void {
     const alpha = this.ttl / this.life;
-    ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    ctx.strokeStyle = `rgba(${p.particleRgb},${alpha.toFixed(2)})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
@@ -398,10 +423,14 @@ type InternalState = "playing" | "dead" | "gameover";
 export function createAsteroidsGame(
   canvas: HTMLCanvasElement,
   callbacks: AsteroidsCallbacks,
+  options?: AsteroidsOptions,
 ): AsteroidsGame {
   const maybeCtx = canvas.getContext("2d");
   if (!maybeCtx) throw new Error("Asteroids: 2D canvas context is not available");
   const ctx: CanvasRenderingContext2D = maybeCtx;
+
+  // Active skin; only read by the drawing code.
+  let palette: AsteroidsPalette = options?.palette ?? SKINS.clasico;
 
   // ── Input ──
   const keys: Record<string, boolean> = {};
@@ -724,12 +753,14 @@ export function createAsteroidsGame(
       const r = 22 + Math.sin((now / 1000) * 6) * 2;
       ctx.save();
       ctx.globalAlpha = 0.8;
-      ctx.strokeStyle = "#f80";
+      applyGlow(ctx, palette.shield, palette.glow);
+      ctx.strokeStyle = palette.shield;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(ship.x, ship.y, r, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+      ctx.shadowBlur = 0;
       return;
     }
 
@@ -739,12 +770,14 @@ export function createAsteroidsGame(
       const r = 22 + (40 - 22) * t;
       ctx.save();
       ctx.globalAlpha = 0.8 * (1 - t);
-      ctx.strokeStyle = "#f80";
+      applyGlow(ctx, palette.shield, palette.glow);
+      ctx.strokeStyle = palette.shield;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(ship.x, ship.y, r, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+      ctx.shadowBlur = 0;
     }
   }
 
@@ -758,28 +791,28 @@ export function createAsteroidsGame(
     const barY = 14;
     const fill = tripleShotTimer / 10;
 
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.fillStyle = palette.barTrack;
     ctx.fillRect(barX, barY, barWidth, barHeight);
-    ctx.fillStyle = "#0ff";
+    ctx.fillStyle = palette.tripleShot;
     ctx.fillRect(barX, barY, barWidth * fill, barHeight);
 
-    ctx.fillStyle = "#0ff";
+    ctx.fillStyle = palette.barText;
     ctx.font = "10px monospace";
     ctx.textAlign = "left";
     ctx.fillText("TRIPLE SHOT", barX, barY + 14);
   }
 
   function draw(): void {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = palette.background;
     ctx.fillRect(0, 0, W, H);
 
-    particles.forEach((p) => p.draw(ctx));
-    asteroids.forEach((a) => a.draw(ctx));
-    powerup?.draw(ctx);
-    shieldPowerup?.draw(ctx);
-    bullets.forEach((b) => b.draw(ctx));
+    particles.forEach((p) => p.draw(ctx, palette));
+    asteroids.forEach((a) => a.draw(ctx, palette));
+    powerup?.draw(ctx, palette);
+    shieldPowerup?.draw(ctx, palette);
+    bullets.forEach((b) => b.draw(ctx, palette));
     if (state !== "gameover") drawShield();
-    ship.draw(ctx);
+    ship.draw(ctx, palette);
 
     drawTripleShotBar();
   }
@@ -863,6 +896,13 @@ export function createAsteroidsGame(
       listenTarget?.removeEventListener("keyup", onKeyUp);
       listenTarget = null;
       clearInput();
+    },
+
+    setSkin(next: AsteroidsPalette): void {
+      palette = next;
+      // While the loop runs (playing, dead or game over) it repaints on its
+      // own; while paused it is stopped, so repaint the frozen frame once.
+      if (started && !destroyed && rafId === null) draw();
     },
   };
 }
