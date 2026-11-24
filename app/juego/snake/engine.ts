@@ -6,6 +6,7 @@
  */
 
 import { FRUITS, FRUITS_IMAGE_SRC } from "./sprites";
+import { SKINS, type SnakePalette } from "./skins";
 
 export type SnakeStatus = "playing" | "paused" | "gameover";
 
@@ -28,6 +29,12 @@ export interface SnakeGame {
   end(): void;
   restart(): void;
   destroy(): void;
+  /** Swaps the palette without touching the game state. */
+  setSkin(palette: SnakePalette): void;
+}
+
+export interface SnakeOptions {
+  palette?: SnakePalette;
 }
 
 type Cell = { x: number; y: number }; // x: 0..19, y: 0..14
@@ -79,13 +86,8 @@ const KEY_TO_DIRECTION: Record<string, Direction> = {
   KeyD: "right",
 };
 
-// ── Look ────────────────────────────────────────────────────────────────────
-const COLOR_BACKGROUND = "#0a0a18";
-const COLOR_GRID = "rgba(255, 255, 255, 0.04)";
-const COLOR_SNAKE = "#39ff14";
-const COLOR_FRUIT = "#ff3b6b"; // fallback circle when the sprite sheet is missing
+// ── Look (colors live in ./skins) ───────────────────────────────────────────
 const SNAKE_INSET = 2;
-const SNAKE_RADIUS = 11;
 const FRUIT_PADDING = 3;
 const EYE_FORWARD = 6; // eye offset along the facing direction
 const EYE_SIDE = 8; // eye offset across the facing direction
@@ -107,10 +109,14 @@ function createInitialSnake(): Cell[] {
 export function createSnakeGame(
   canvas: HTMLCanvasElement,
   callbacks: SnakeCallbacks,
+  options?: SnakeOptions,
 ): SnakeGame {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Snake: could not get a 2D canvas context");
   const g: CanvasRenderingContext2D = ctx;
+
+  // Active skin; only read by the drawing code.
+  let palette: SnakePalette = options?.palette ?? SKINS.clasico;
 
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
@@ -261,10 +267,10 @@ export function createSnakeGame(
 
   // ── Drawing ───────────────────────────────────────────────────────────────
   function draw(): void {
-    g.fillStyle = COLOR_BACKGROUND;
+    g.fillStyle = palette.background;
     g.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    g.strokeStyle = COLOR_GRID;
+    g.strokeStyle = palette.grid;
     g.lineWidth = 1;
     g.beginPath();
     for (let x = 1; x < COLS; x++) {
@@ -275,6 +281,8 @@ export function createSnakeGame(
       g.moveTo(0, y * CELL_SIZE);
       g.lineTo(CANVAS_WIDTH, y * CELL_SIZE);
     }
+    // Outer border: offset by half a pixel so the 1px line stays fully inside the canvas.
+    g.rect(0.5, 0.5, CANVAS_WIDTH - 1, CANVAS_HEIGHT - 1);
     g.stroke();
 
     if (fruit) drawFruit(fruit);
@@ -286,25 +294,52 @@ export function createSnakeGame(
     const cy = f.cell.y * CELL_SIZE + CELL_SIZE / 2;
     const sprite = FRUITS[f.sprite];
 
-    if (fruitImageReady && sprite) {
+    if (palette.fruitStyle === "sprite" && fruitImageReady && sprite) {
       // Keep the sprite's aspect ratio: sizes go from 110x160 to 170x160.
       const maxSize = CELL_SIZE - FRUIT_PADDING * 2;
       const scale = Math.min(maxSize / sprite.w, maxSize / sprite.h);
       const dw = sprite.w * scale;
       const dh = sprite.h * scale;
+      g.save();
+      if (palette.fruitGlow > 0) {
+        // The shadow follows the sprite's alpha, so the halo hugs the fruit shape.
+        g.shadowColor = palette.fruit;
+        g.shadowBlur = palette.fruitGlow;
+      }
       g.drawImage(fruitImage, sprite.x, sprite.y, sprite.w, sprite.h, cx - dw / 2, cy - dh / 2, dw, dh);
+      g.restore();
       return;
     }
 
-    // Fallback while the PNG loads, or for good if it fails.
-    g.fillStyle = COLOR_FRUIT;
+    // Flat shape: the skin's own fruit, or the sprite fallback while the PNG
+    // loads (or for good if it fails).
+    const radius = CELL_SIZE / 2 - FRUIT_PADDING - 2;
+    g.save();
+    if (palette.fruitStyle !== "sprite" && palette.glow > 0) {
+      g.shadowColor = palette.fruit;
+      g.shadowBlur = palette.glow;
+    }
+    g.fillStyle = palette.fruit;
     g.beginPath();
-    g.arc(cx, cy, CELL_SIZE / 2 - FRUIT_PADDING - 2, 0, Math.PI * 2);
+    if (palette.fruitStyle === "diamond") {
+      g.moveTo(cx, cy - radius);
+      g.lineTo(cx + radius, cy);
+      g.lineTo(cx, cy + radius);
+      g.lineTo(cx - radius, cy);
+      g.closePath();
+    } else {
+      g.arc(cx, cy, radius, 0, Math.PI * 2);
+    }
     g.fill();
+    g.restore();
   }
 
   function roundedRect(x: number, y: number, w: number, h: number, r: number): void {
     g.beginPath();
+    if (r <= 0) {
+      g.rect(x, y, w, h);
+      return;
+    }
     g.moveTo(x + r, y);
     g.arcTo(x + w, y, x + w, y + h, r);
     g.arcTo(x + w, y + h, x, y + h, r);
@@ -315,9 +350,11 @@ export function createSnakeGame(
 
   function drawSnake(): void {
     g.save();
-    g.shadowColor = COLOR_SNAKE;
-    g.shadowBlur = 10;
-    g.fillStyle = COLOR_SNAKE;
+    if (palette.glow > 0) {
+      g.shadowColor = palette.snake;
+      g.shadowBlur = palette.glow;
+    }
+    g.fillStyle = palette.snake;
     // Tail to head, so the head is painted last and stays on top.
     for (let i = snake.length - 1; i >= 0; i--) {
       const c = snake[i];
@@ -326,11 +363,12 @@ export function createSnakeGame(
         c.y * CELL_SIZE + SNAKE_INSET,
         CELL_SIZE - SNAKE_INSET * 2,
         CELL_SIZE - SNAKE_INSET * 2,
-        SNAKE_RADIUS,
+        palette.snakeRadius,
       );
       g.fill();
     }
     g.restore();
+    g.shadowBlur = 0;
 
     drawEyes(snake[0], queuedDirection ?? direction);
   }
@@ -345,13 +383,13 @@ export function createSnakeGame(
       const ex = cx + fwd.x * EYE_FORWARD + side.x * EYE_SIDE * sign;
       const ey = cy + fwd.y * EYE_FORWARD + side.y * EYE_SIDE * sign;
 
-      g.fillStyle = "#ffffff";
+      g.fillStyle = palette.eye;
       g.beginPath();
       g.arc(ex, ey, EYE_RADIUS, 0, Math.PI * 2);
       g.fill();
 
       // The pupil looks where the snake is heading.
-      g.fillStyle = "#0a0a18";
+      g.fillStyle = palette.pupil;
       g.beginPath();
       g.arc(ex + fwd.x * PUPIL_SHIFT, ey + fwd.y * PUPIL_SHIFT, PUPIL_RADIUS, 0, Math.PI * 2);
       g.fill();
@@ -431,5 +469,11 @@ export function createSnakeGame(
     window.removeEventListener("keydown", onKeyDown);
   }
 
-  return { start, pause, resume, end, restart, destroy };
+  function setSkin(next: SnakePalette): void {
+    palette = next;
+    // While playing the loop repaints on its own; on game over it is stopped.
+    if (!destroyed && status !== "playing") draw();
+  }
+
+  return { start, pause, resume, end, restart, destroy, setSkin };
 }
