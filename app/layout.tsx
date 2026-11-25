@@ -43,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Nav />
           <main className="av-main">{children}</main>
           <footer
+            className="av-footer"
             style={{
               borderTop: "1px solid var(--line)",
               padding: "20px 32px",
