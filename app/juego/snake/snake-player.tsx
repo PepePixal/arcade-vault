@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import GameOverModal from "@/components/games/game-over-modal";
+import MobileGameControls from "@/components/games/mobile-game-controls";
+import MobileStatsBar from "@/components/games/mobile-stats-bar";
 import SkinPicker from "@/components/games/skin-picker";
 import {
   createSnakeGame,
@@ -14,11 +16,15 @@ import {
 import { SKINS } from "./skins";
 import { saveScore, setLastPlayerName } from "@/lib/scores";
 import { getLastSkin, setLastSkin, type SkinId } from "@/lib/skins";
+import type { VirtualKey } from "@/components/games/virtual-gamepad";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 
 const INITIAL_STATS: SnakeStats = { score: 0, lives: 1, level: 1 };
+
+// Virtual gamepad button A: unused in this game, shown disabled.
+const ACTION_A: VirtualKey | null = null;
 
 // Keys the game uses that would otherwise scroll the page.
 const SCROLL_KEYS = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
@@ -96,18 +102,27 @@ export default function SnakePlayer({ gameId, title }: SnakePlayerProps) {
   const isGameOver = status === "gameover";
   const isPaused = status === "paused";
 
-  const togglePause = (e: MouseEvent<HTMLButtonElement>) => {
-    // Release focus so Space/Enter never activate the HUD button.
-    e.currentTarget.blur();
+  // Shared by the desktop HUD and the mobile controls (no event needed).
+  const pauseOrResume = () => {
     const game = gameRef.current;
     if (!game) return;
     if (isPaused) game.resume();
     else game.pause();
   };
 
+  const finishGame = () => {
+    gameRef.current?.end();
+  };
+
+  const togglePause = (e: MouseEvent<HTMLButtonElement>) => {
+    // Release focus so Space/Enter never activate the HUD button.
+    e.currentTarget.blur();
+    pauseOrResume();
+  };
+
   const endGame = (e: MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
-    gameRef.current?.end();
+    finishGame();
   };
 
   const changeSkin = (next: SkinId) => {
@@ -132,7 +147,7 @@ export default function SnakePlayer({ gameId, title }: SnakePlayerProps) {
 
   return (
     <>
-      <div className="player-hud">
+      <div className="player-hud max-md:hidden!">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat">
             <div className="l">Jugador</div>
@@ -175,6 +190,8 @@ export default function SnakePlayer({ gameId, title }: SnakePlayerProps) {
         </div>
       </div>
 
+      <MobileStatsBar score={stats.score} lives={stats.lives} level={stats.level} />
+
       <div className="crt">
         <div className="crt-screen">
           <canvas
@@ -191,6 +208,16 @@ export default function SnakePlayer({ gameId, title }: SnakePlayerProps) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+
+      <MobileGameControls
+        actionA={ACTION_A}
+        skin={skin}
+        onSkinChange={changeSkin}
+        isPaused={isPaused}
+        isGameOver={isGameOver}
+        onTogglePause={pauseOrResume}
+        onEnd={finishGame}
+      />
 
       {isGameOver && finalStats && (
         <GameOverModal

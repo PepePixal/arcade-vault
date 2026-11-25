@@ -37,7 +37,8 @@ app/
 └── supabase-check/        # Supabase connectivity diagnostic page
 
 components/
-├── games/      # game-card, library, game-leaderboard, game-stats, game-over-modal, use-game-stats
+├── games/      # game-card, library, game-leaderboard, game-stats, game-over-modal, use-game-stats,
+│               # skin-picker, mobile-stats-bar, mobile-game-controls, virtual-gamepad, skin-select
 ├── hall-of-fame/
 ├── home/       # home-view, home-activity (real recent activity)
 └── layout/nav.tsx
@@ -89,10 +90,11 @@ Every game follows the same contract (full detail in `.claude/skills/add-game/re
 2. **Player + page**: `<id>-player.tsx` (client, platform HUD, PAUSA / FIN / SALIR, `GameOverModal`, `saveScore`) and `jugar/page.tsx` (server, `getGame(id)` + `notFound()`).
 3. **Catalog**: one migration inserting the row in `public.games`. No new route and no new score table.
 4. **Styles**: `.cover-<id>` in `app/globals.css`; the canvas fits `.crt-screen`. Game assets go in `public/<id>/`.
+5. **Mobile** (< 768px, spec 17): the player hides the desktop HUD with `className="player-hud max-md:hidden!"` (the `!` is required: unlayered `.player-hud` CSS beats Tailwind utilities), renders `<MobileStatsBar>` right before `.crt` and `<MobileGameControls>` right after, and declares `const ACTION_A: VirtualKey | null` (the key for button A, or `null` to disable it; B is always Space, the D-pad sends arrows). PAUSA / FIN logic lives in event-free functions shared by the desktop HUD and the mobile controls. The virtual gamepad dispatches synthetic `KeyboardEvent`s (`key` + `code`) on `window`, so engines need no changes but must listen on `window`. Nav, footer and CRT frame adapt via CSS (`body:has(.av-player)`).
 
 ## Development Workflow: Spec-Driven Development
 
-Specs live in `specs/NN-slug.md` (currently 01–16). Project skills in `.claude/skills/`:
+Specs live in `specs/NN-slug.md` (currently 01–17). Project skills in `.claude/skills/`:
 
 | Command | What it does |
 |---------|-------------|

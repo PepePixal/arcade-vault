@@ -1390,3 +1390,217 @@ a.lb-link { display: inline-block; text-decoration: none; white-space: nowrap; }
 .terminal-success.is-error { border-color: var(--magenta); box-shadow: 0 0 22px rgba(255,0,200,0.25); }
 .terminal-success.is-error .term-body .line { color: var(--magenta); }
 .terminal-success.is-error .term-body .success { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,200,0.45); }
+
+/* ===== mobile player layout (spec 17) =====
+   Below Tailwind's md breakpoint (48rem) the play pages drop the nav, footer
+   and desktop HUD, and the CRT frame shrinks so the canvas uses almost the
+   full width. Desktop (>= 768px) is unchanged. Kept at the end of the file so
+   it overrides the earlier .av-player rules. */
+@media (max-width: 767px) {
+  body:has(.av-player) .av-nav,
+  body:has(.av-player) .av-footer {
+    display: none;
+  }
+
+  .av-player {
+    margin: 8px auto;
+    padding: 0 6px 16px;
+  }
+
+  .av-player .crt {
+    width: 100%;
+    min-width: 0;
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 2px #1b1b22,
+      0 0 0 3px #2a2a35,
+      0 12px 32px -12px rgba(0,245,255,0.3);
+  }
+
+  .av-player .crt-screen {
+    border-radius: 6px / 12px;
+  }
+
+  .av-player .crt-bottom {
+    display: none;
+  }
+}
+
+/* ===== mobile game controls (spec 17) =====
+   Ported from references/gamepad-assets/gamepad.html. The components wrap
+   these in an `md:hidden` element: these classes set their own `display`,
+   and unlayered CSS beats Tailwind utilities on the same element. */
+.gp-stats {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.gp-stat { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.gp-stat .l { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; }
+.gp-stat .v { font-family: var(--pixel); font-size: 11px; color: var(--cyan); text-shadow: 0 0 6px rgba(0,245,255,0.5); white-space: nowrap; }
+.gp-stat.lives .v { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.5); }
+.gp-stat.level .v { color: var(--yellow); text-shadow: 0 0 6px rgba(245,255,0,0.5); }
+
+.gp-mobile { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+/* gamepad shell */
+.gp {
+  position: relative;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #1c1c28 0%, #0c0c14 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 50px -30px rgba(0,245,255,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -2px 0 rgba(0,0,0,0.6);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.gp::before {
+  content: ""; position: absolute; inset: 4px;
+  border: 1px solid rgba(0,245,255,0.14);
+  border-radius: 12px; pointer-events: none;
+}
+.gp::after {
+  content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 8px 8px;
+  border-radius: inherit; pointer-events: none; opacity: 0.6;
+}
+.gp-body {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 12px 6px;
+}
+.gp button { touch-action: none; -webkit-touch-callout: none; }
+
+/* D-pad: 46px buttons, above the ~44px touch target */
+.gp-dpad { position: relative; width: 144px; height: 144px; flex: none; }
+.dp {
+  position: absolute;
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  background: linear-gradient(180deg, #1a1a25, #0a0a12);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 #050507,
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -2px 4px rgba(0,0,0,0.6);
+  transition: transform 80ms, box-shadow 140ms, color 140ms, border-color 140ms, background 140ms;
+}
+.dp .dp-arrow { width: 22px; height: 22px; transition: filter 140ms; }
+.dp.on {
+  transform: translateY(3px);
+  color: var(--cyan);
+  background: linear-gradient(180deg, #08161e, #030a0e);
+  border-color: var(--cyan);
+  box-shadow:
+    0 1px 0 #050507,
+    inset 0 0 16px rgba(0,245,255,0.45),
+    0 0 16px rgba(0,245,255,0.5);
+}
+.dp.on .dp-arrow { filter: drop-shadow(0 0 6px var(--cyan)) drop-shadow(0 0 12px var(--cyan)); }
+.dp-up    { top: 0;    left: 49px; }
+.dp-down  { bottom: 0; left: 49px; }
+.dp-left  { left: 0;   top: 49px; }
+.dp-right { right: 0;  top: 49px; }
+.dp-hub {
+  position: absolute; top: 49px; left: 49px;
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 50%, #181822 0%, #08080d 80%);
+  border: 1px solid rgba(0,245,255,0.15);
+  border-radius: 6px;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.dp-hub-gem {
+  width: 12px; height: 12px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan), inset 0 0 4px rgba(0,0,0,0.5);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  animation: gp-pulse-led 2s ease-in-out infinite;
+}
+@keyframes gp-pulse-led { 50% { opacity: 0.35; transform: scale(0.85); } }
+
+/* A / B */
+.gp-actions { display: flex; align-items: center; gap: 16px; flex: none; }
+.ab {
+  position: relative;
+  width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.25), transparent 50%),
+    radial-gradient(circle at 50% 55%, var(--ab-mid), var(--ab-deep) 75%);
+  cursor: pointer;
+  box-shadow:
+    0 6px 0 #050507,
+    0 0 22px var(--ab-glow),
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -4px 8px rgba(0,0,0,0.4);
+  transition: transform 80ms, box-shadow 140ms;
+}
+.ab.a { color: var(--magenta); --ab-mid: rgba(255,0,110,0.7); --ab-deep: rgba(110,0,40,0.95); --ab-glow: rgba(255,0,110,0.4); }
+.ab.b { color: var(--cyan);    --ab-mid: rgba(0,200,230,0.7); --ab-deep: rgba(0,50,70,0.95);  --ab-glow: rgba(0,245,255,0.4); }
+.ab .ab-letter {
+  position: relative; z-index: 2;
+  font-family: var(--pixel); font-size: 20px;
+  color: #fff; letter-spacing: 0.02em;
+}
+.ab.a .ab-letter { text-shadow: 0 0 8px var(--magenta), 0 0 18px var(--magenta), 0 1px 0 rgba(0,0,0,0.6); }
+.ab.b .ab-letter { text-shadow: 0 0 8px var(--cyan),    0 0 18px var(--cyan),    0 1px 0 rgba(0,0,0,0.6); }
+.ab .ab-ring {
+  position: absolute; inset: -8px;
+  border-radius: 50%;
+  border: 1px dashed currentColor;
+  opacity: 0; transition: opacity 140ms, transform 200ms;
+}
+.ab.on {
+  transform: translateY(4px) scale(0.97);
+  box-shadow: 0 1px 0 #050507, 0 0 36px var(--ab-glow), inset 0 0 18px rgba(0,0,0,0.5);
+}
+.ab.on .ab-ring { opacity: 1; transform: scale(1.08); }
+/* A unused by the game: dimmed so it does not look like a broken button */
+.ab:disabled { opacity: 0.25; filter: grayscale(0.8); box-shadow: 0 6px 0 #050507; cursor: default; }
+
+/* Skin · PAUSA · FIN row */
+.gp-hud { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
+.gp-hud .btn { padding: 12px 6px; font-size: 9px; letter-spacing: 0.1em; min-height: 44px; }
+.gp-skin {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--green);
+  box-shadow: 0 0 10px rgba(0,255,136,0.25);
+  color: var(--green);
+  font-family: var(--pixel); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.gp-skin::after { content: "▾"; font-family: var(--mono); font-size: 12px; }
+.gp-skin:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+.gp-skin select {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  font-size: 16px; /* >= 16px: iOS does not zoom on focus */
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-hub-gem { animation: none; }
+  .dp, .ab, .ab .ab-ring { transition: none; }
+}
