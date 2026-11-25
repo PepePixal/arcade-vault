@@ -764,6 +764,19 @@ a { color: inherit; text-decoration: none; }
   background: #000;
 }
 
+/* "Pausa" label over the canvas while the game is paused */
+.pause-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--pixel);
+  font-size: clamp(18px, 5vw, 40px);
+  letter-spacing: 0.2em;
+  color: var(--yellow);
+  text-shadow: 0 0 8px rgba(245,255,0,0.7), 0 0 18px rgba(245,255,0,0.4);
+  background: rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+
 /* fake in-screen game */
 .game-arena {
   position: absolute; inset: 0;

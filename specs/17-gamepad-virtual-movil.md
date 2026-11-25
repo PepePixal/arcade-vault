@@ -1,6 +1,6 @@
 # SPEC 17 — Gamepad virtual para móvil
 
-> **Status:** Aprobada
+> **Status:** Implementado
 > **Depends on:** SPEC 05, SPEC 14, SPEC 15, SPEC 16
 > **Date:** 2026-11-25
 > **Objective:** Permitir jugar a todos los juegos de Arcade Vault en móviles táctiles (ancho < 768px) con un layout propio: barra compacta de stats, canvas a casi todo el ancho, gamepad virtual (cruceta + A + B) que emula el teclado y una fila con Skin · PAUSA · FIN.
