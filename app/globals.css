@@ -321,6 +321,8 @@ a { color: inherit; text-decoration: none; }
 }
 .chip.active { color: var(--magenta); border-color: var(--magenta); box-shadow: 0 0 10px rgba(255,0,110,0.35); }
 .chip:hover:not(.active) { color: var(--ink); }
+/* Skin picker: same vertical padding as the HUD action buttons so both rows share one height. */
+.chip.skin-chip { padding-block: 10px; }
 /* Skin picker: the active skin is highlighted in green instead of magenta. */
 .chip.skin-chip.active { color: var(--green); border-color: var(--green); box-shadow: 0 0 10px rgba(0,255,136,0.35); }
 
@@ -684,6 +686,14 @@ a { color: inherit; text-decoration: none; }
 .hud-stat.lives .v { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.5); }
 .hud-stat.level .v { color: var(--yellow); text-shadow: 0 0 6px rgba(245,255,0,0.5); }
 .hud-actions { display: flex; gap: 10px; }
+.hud-actions .btn {
+  white-space: nowrap;
+  padding: 10px 12px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+/* Pause/resume keeps the width of "REANUDAR" so toggling never reflows the HUD */
+.hud-actions .btn.yellow { min-width: calc(8.8em + 26px); }
 
 .crt {
   position: relative;
@@ -1590,7 +1600,7 @@ a.lb-link { display: inline-block; text-decoration: none; white-space: nowrap; }
 
 /* Skin · PAUSA · FIN row */
 .gp-hud { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
-.gp-hud .btn { padding: 12px 6px; font-size: 9px; letter-spacing: 0.1em; min-height: 44px; }
+.gp-hud .btn { padding: 12px 6px; font-size: 9px; letter-spacing: 0.1em; min-height: 44px; white-space: nowrap; }
 .gp-skin {
   position: relative;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
