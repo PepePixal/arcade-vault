@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import GameOverModal from "@/components/games/game-over-modal";
+import PauseOverlay from "@/components/games/pause-overlay";
 import MobileGameControls from "@/components/games/mobile-game-controls";
 import MobileStatsBar from "@/components/games/mobile-stats-bar";
 import SkinPicker from "@/components/games/skin-picker";
@@ -200,6 +201,7 @@ export default function AsteroidsPlayer({ gameId, title }: AsteroidsPlayerProps)
             height={CANVAS_HEIGHT}
             aria-label={`${title}: ←/→ rotar, ↑ propulsar, Espacio disparar`}
           />
+          <PauseOverlay visible={isPaused} />
         </div>
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
