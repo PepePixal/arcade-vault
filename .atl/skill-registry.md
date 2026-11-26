@@ -47,6 +47,7 @@
 | `skill-improver` | Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills. | user | `C:\Users\Pepe\.agents\skills\skill-improver\SKILL.md` |
 | `spec` | Designs and develops specs following the spec-driven method. Asks clarifying questions before proposing structure, and builds the spec section by section. Use it when starting a large feature, before writing code. | project | `C:\Users\Pepe\Desktop\ClaudeCode\Claude Code Fdo Herrera\05-arcade-vault\.claude\skills\spec\SKILL.md` |
 | `spec-impl` | Implements an approved spec. Validates that the state means "Approved" (in any language), creates a git branch named after the spec, switches to it, and starts the implementation step by step with pauses to review diffs. | project | `C:\Users\Pepe\Desktop\ClaudeCode\Claude Code Fdo Herrera\05-arcade-vault\.claude\skills\spec-impl\SKILL.md` |
+| `spec-impl-game` | Trigger: /spec-impl-game. Implementa la spec aprobada de un juego nuevo siguiendo /spec-impl y después ejecuta, en secuencia, los agentes skin-designer y mobile-porter sobre ese juego. | project | `C:\Users\Pepe\Desktop\ClaudeCode\Claude Code Fdo Herrera\05-arcade-vault\.claude\skills\spec-impl-game\SKILL.md` |
 | `work-unit-commits` | Plan commits as reviewable work units. Trigger: commit splitting, chained PRs, or keeping tests and docs with code. | user | `C:\Users\Pepe\.agents\skills\work-unit-commits\SKILL.md` |
 
 ## Loading protocol
