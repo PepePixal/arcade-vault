@@ -101,6 +101,7 @@ Specs live in `specs/NN-slug.md` (currently 01–17). Project skills in `.claude
 | `/spec <feature>` | Guided spec designer. Asks clarifying questions, builds the spec section by section from `template.md`, saves it with state `Borrador`. Never writes code. |
 | `/spec-impl <NN-slug>` | Implements a spec only if its state means "Approved". Creates/switches to branch `spec-NN-slug` (controlled by `AutoCreateBranch` in `specs/.spec-config.yml`) and implements step by step with diff review pauses. |
 | `/add-game <name>` | Generates ONLY the spec to integrate a new game (from `references/started-games/` or from scratch), following the integration blueprint. |
+| `/spec-impl-game <NN-slug>` | Same flow as `/spec-impl` (reads and follows its phases) for a new game; once the implementation is done it runs, sequentially, `skin-designer` and then `mobile-porter` on that game, pausing for review between them. Never commits. |
 
 Project agents in `.claude/agents/`:
 
@@ -111,7 +112,7 @@ Project agents in `.claude/agents/`:
 | `skin-designer` | Audits that every game has the three skins `clasico` (current look), `neon` and `retro`, all readable on the dark platform background. Unlike the other agents, it **writes code**: shared `lib/skins.ts` (types + `localStorage` persistence) and `components/games/skin-picker.tsx`, plus per game `app/juego/<id>/skins.ts`, palette-driven `engine.ts` with `setSkin()`, and the picker in the player HUD. Implements one game per run; if several games lack skins and none was named, it only reports and asks which one. Runs lint, tsc and build; never commits. |
 | `mobile-porter` | Audits that every game follows the spec 17 mobile pattern (`player-hud max-md:hidden!`, `MobileStatsBar` before `.crt`, `MobileGameControls` after it, `ACTION_A`, event-free `pauseOrResume` / `finishGame`, engine listening on `window`) and ports one new game per run, using `tetris-player.tsx` as reference. **Writes code** only in the game's player; never touches `engine.ts`, shared mobile components or mobile CSS (stops and reports if the engine is incompatible). If several games fail and none was named, it only reports and asks which one. Runs lint, tsc and build; never commits. |
 
-Typical flow: `game-planner` (choose the game) → `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` → verify → PR to `main`. Game jam flow: `game-jam` with a theme → pick spec A or B → move it to `specs/NN-<slug>.md` → approve → `/spec-impl`.
+Typical flow: `game-planner` (choose the game) → `/spec` (or `/add-game`) → review → mark the spec as approved → `/spec-impl` (or `/spec-impl-game` for a new game, which also adds skins and mobile support) → verify → PR to `main`. Game jam flow: `game-jam` with a theme → pick spec A or B → move it to `specs/NN-<slug>.md` → approve → `/spec-impl`.
 
 Other conventions:
 - **Always use `/frontend-design` to design the user interface.**
