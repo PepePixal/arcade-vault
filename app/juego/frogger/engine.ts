@@ -6,6 +6,8 @@
 // Public contract
 // ---------------------------------------------------------------------------
 
+import { SKINS, type FroggerPalette } from "./skins";
+
 export type FroggerStatus = "playing" | "paused" | "gameover";
 
 export interface FroggerStats {
@@ -27,6 +29,7 @@ export interface FroggerGame {
   end(): void; // forces game over (FIN button)
   restart(): void; // new game: score 0, level 1, 3 lives
   destroy(): void; // cancels the loop and removes listeners
+  setSkin(palette: FroggerPalette): void; // presentation only; never touches game state
 }
 
 // ---------------------------------------------------------------------------
@@ -180,39 +183,17 @@ const DIRECTION_DELTA: Record<Direction, { dc: number; dr: number }> = {
   right: { dc: 1, dr: 0 },
 };
 
-// Single color table so every drawing reads from one place.
-const COLORS = {
-  road: "#0b0b0f",
-  roadLine: "#3a3a44",
-  river: "#0b2a5a",
-  safe: "#1d4d22",
-  goalsBg: "#5fbf4a",
-  goalMouth: "#174d1c",
-  goalBorder: "#e8c33a",
-  cars: ["#e5322d", "#f2c230", "#2f7de1"],
-  wheel: "#111111",
-  truck: "#8a8f98",
-  truckCab: "#c9ccd2",
-  log: "#7a4a21",
-  logLine: "#4f2e12",
-  turtle: "#2f9e44",
-  turtleScale: "#1c6b2c",
-  turtleSubmerged: "rgba(47, 158, 68, 0.35)",
-  frog: "#7cff4f",
-  frogDark: "#2f8f1f",
-  eyeWhite: "#ffffff",
-  eyePupil: "#000000",
-  timeHigh: "#1f5fe0",
-  timeMid: "#f2c230",
-  timeLow: "#e5322d",
-  timeTrack: "#0a0a14",
-};
 
 // ---------------------------------------------------------------------------
 // Engine
 // ---------------------------------------------------------------------------
 
-export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerCallbacks): FroggerGame {
+export function createFroggerGame(
+  canvas: HTMLCanvasElement,
+  callbacks: FroggerCallbacks,
+  options?: { palette?: FroggerPalette },
+): FroggerGame {
+  let palette: FroggerPalette = options?.palette ?? SKINS.clasico;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Frogger: could not get a 2D canvas context");
   const g: CanvasRenderingContext2D = ctx;
@@ -464,24 +445,27 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
   function draw(): void {
     drawBackground();
     drawGoals();
+    // Glow only on entities; background, goals and time bar stay crisp.
+    if (palette.glow > 0) g.shadowBlur = palette.glow;
     for (const lane of lanes) {
       for (const entity of lane.entities) drawEntity(entity, lane.row, lane.dir);
     }
     drawFrog();
+    g.shadowBlur = 0;
     drawTimeBar();
   }
 
   function drawBackground(): void {
     for (let row = 0; row < ROWS; row++) {
-      let color = COLORS.road;
-      if (row === ROW_GOALS) color = COLORS.goalsBg;
-      else if (isRiverRow(row)) color = COLORS.river;
-      else if (row === ROW_SAFE_MID || row === ROW_START) color = COLORS.safe;
+      let color = palette.road;
+      if (row === ROW_GOALS) color = palette.goalsBg;
+      else if (isRiverRow(row)) color = palette.river;
+      else if (row === ROW_SAFE_MID || row === ROW_START) color = palette.safe;
       g.fillStyle = color;
       g.fillRect(0, row * CELL, CANVAS_W, CELL);
     }
     // Dashed lane separators on the road.
-    g.strokeStyle = COLORS.roadLine;
+    g.strokeStyle = palette.roadLine;
     g.lineWidth = 2;
     g.setLineDash([12, 12]);
     for (let row = ROW_ROAD_TOP + 1; row <= ROW_ROAD_BOT; row++) {
@@ -499,9 +483,9 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
     GOAL_COLS.forEach((col, i) => {
       const x = col * CELL + 3;
       const w = GOAL_WIDTH * CELL - 6;
-      g.fillStyle = COLORS.goalMouth;
+      g.fillStyle = palette.goalMouth;
       g.fillRect(x, top, w, h);
-      g.strokeStyle = COLORS.goalBorder;
+      g.strokeStyle = palette.goalBorder;
       g.lineWidth = 2;
       g.strokeRect(x, top, w, h);
       if (goals[i]) drawFrogShape(x + w / 2, top + h / 2, "up", false, 0.8);
@@ -529,8 +513,9 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
   }
 
   function drawCar(x: number, y: number, w: number, dir: 1 | -1, row: number): void {
-    const bodyColor = COLORS.cars[row % COLORS.cars.length];
-    g.fillStyle = COLORS.wheel;
+    const bodyColor = palette.cars[row % palette.cars.length];
+    g.shadowColor = bodyColor;
+    g.fillStyle = palette.wheel;
     for (const wx of [x + 8, x + w - 8]) {
       for (const wy of [y + 9, y + CELL - 9]) {
         g.beginPath();
@@ -541,27 +526,29 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
     g.fillStyle = bodyColor;
     g.fillRect(x + 3, y + 10, w - 6, CELL - 20);
     // Windshield on the front side.
-    g.fillStyle = COLORS.road;
+    g.fillStyle = palette.road;
     const wsX = dir === 1 ? x + w - 14 : x + 8;
     g.fillRect(wsX, y + 13, 6, CELL - 26);
   }
 
   function drawTruck(x: number, y: number, w: number, dir: 1 | -1): void {
     const cabW = 22;
+    g.shadowColor = palette.truck;
     const cabX = dir === 1 ? x + w - cabW - 2 : x + 2;
     const trailerX = dir === 1 ? x + 2 : x + cabW + 4;
-    g.fillStyle = COLORS.truck;
+    g.fillStyle = palette.truck;
     g.fillRect(trailerX, y + 7, w - cabW - 6, CELL - 14);
-    g.fillStyle = COLORS.truckCab;
+    g.fillStyle = palette.truckCab;
     g.fillRect(cabX, y + 10, cabW, CELL - 20);
-    g.fillStyle = COLORS.wheel;
+    g.fillStyle = palette.wheel;
     g.fillRect(cabX + (dir === 1 ? 14 : 3), y + 13, 5, CELL - 26);
   }
 
   function drawLog(x: number, y: number, w: number): void {
-    g.fillStyle = COLORS.log;
+    g.shadowColor = palette.log;
+    g.fillStyle = palette.log;
     g.fillRect(x + 2, y + 6, w - 4, CELL - 12);
-    g.strokeStyle = COLORS.logLine;
+    g.strokeStyle = palette.logLine;
     g.lineWidth = 2;
     for (let lx = x + 14; lx < x + w - 10; lx += 22) {
       g.beginPath();
@@ -574,22 +561,23 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
   }
 
   function drawTurtles(x: number, y: number, count: number, submerged: boolean): void {
+    g.shadowColor = palette.turtle;
     for (let i = 0; i < count; i++) {
       const cx = x + i * CELL + CELL / 2;
       const cy = y + CELL / 2;
       if (submerged) {
-        g.strokeStyle = COLORS.turtleSubmerged;
+        g.strokeStyle = palette.turtleSubmerged;
         g.lineWidth = 2;
         g.beginPath();
         g.arc(cx, cy, 14, 0, Math.PI * 2);
         g.stroke();
         continue;
       }
-      g.fillStyle = COLORS.turtle;
+      g.fillStyle = palette.turtle;
       g.beginPath();
       g.arc(cx, cy, 15, 0, Math.PI * 2);
       g.fill();
-      g.fillStyle = COLORS.turtleScale;
+      g.fillStyle = palette.turtleScale;
       for (const [dx, dy] of [[0, 0], [-6, -6], [6, -6], [-6, 6], [6, 6]]) {
         g.beginPath();
         g.arc(cx + dx, cy + dy, 3.5, 0, Math.PI * 2);
@@ -614,11 +602,12 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
     g.save();
     g.translate(cx, cy);
     g.rotate(angle);
+    g.shadowColor = palette.frog;
     g.scale(scale, scale);
 
     // Legs: extended while jumping, tucked otherwise.
     const reach = jumping ? 15 : 9;
-    g.strokeStyle = COLORS.frogDark;
+    g.strokeStyle = palette.frogDark;
     g.lineWidth = 4;
     g.beginPath();
     g.moveTo(-8, -6);
@@ -632,18 +621,18 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
     g.stroke();
 
     // Body: 28 x 24 ellipse.
-    g.fillStyle = COLORS.frog;
+    g.fillStyle = palette.frog;
     g.beginPath();
     g.ellipse(0, 0, 12, 14, 0, 0, Math.PI * 2);
     g.fill();
 
     // Eyes.
     for (const ex of [-6, 6]) {
-      g.fillStyle = COLORS.eyeWhite;
+      g.fillStyle = palette.eyeWhite;
       g.beginPath();
       g.arc(ex, -9, 4, 0, Math.PI * 2);
       g.fill();
-      g.fillStyle = COLORS.eyePupil;
+      g.fillStyle = palette.eyePupil;
       g.beginPath();
       g.arc(ex, -10, 2, 0, Math.PI * 2);
       g.fill();
@@ -653,10 +642,10 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
 
   function drawTimeBar(): void {
     const ratio = Math.max(0, timeLeft / roundTimeMs(level));
-    g.fillStyle = COLORS.timeTrack;
+    g.fillStyle = palette.timeTrack;
     // The track also covers the gap under the bar, so it reads as one dark strip.
     g.fillRect(0, ROW_GOALS * CELL, CANVAS_W, TIME_BAR_H + TIME_BAR_GAP);
-    g.fillStyle = ratio > 0.5 ? COLORS.timeHigh : ratio > 0.25 ? COLORS.timeMid : COLORS.timeLow;
+    g.fillStyle = ratio > 0.5 ? palette.timeHigh : ratio > 0.25 ? palette.timeMid : palette.timeLow;
     g.fillRect(0, ROW_GOALS * CELL, CANVAS_W * ratio, TIME_BAR_H);
   }
 
@@ -731,5 +720,11 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
     window.removeEventListener("keydown", onKeyDown);
   }
 
-  return { start, pause, resume, end, restart, destroy };
+  function setSkin(next: FroggerPalette): void {
+    palette = next;
+    // The loop redraws while playing or paused; after game over it is stopped.
+    if (!destroyed && status === "gameover") draw();
+  }
+
+  return { start, pause, resume, end, restart, destroy, setSkin };
 }

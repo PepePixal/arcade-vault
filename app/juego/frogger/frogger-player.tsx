@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import GameOverModal from "@/components/games/game-over-modal";
 import PauseOverlay from "@/components/games/pause-overlay";
+import SkinPicker from "@/components/games/skin-picker";
 import { createFroggerGame, type FroggerGame, type FroggerStats, type FroggerStatus } from "./engine";
+import { SKINS } from "./skins";
 import { saveScore, setLastPlayerName } from "@/lib/scores";
+import { getLastSkin, setLastSkin, type SkinId } from "@/lib/skins";
 
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 560;
@@ -15,6 +18,9 @@ const INITIAL_STATS: FroggerStats = { score: 0, lives: 3, level: 1 };
 
 // Keys the game uses that would otherwise scroll the page.
 const SCROLL_KEYS = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+// The stored skin never changes behind our back, so there is nothing to subscribe to.
+const noSubscribe = () => () => {};
 
 interface FroggerPlayerProps {
   gameId: string;
@@ -29,17 +35,31 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
   const [finalStats, setFinalStats] = useState<FroggerStats | null>(null);
   const router = useRouter();
 
+  // Stored skin: "clasico" on the server and during hydration, the saved one
+  // right after (no hydration mismatch). A click overrides it locally.
+  const storedSkin = useSyncExternalStore<SkinId>(
+    noSubscribe,
+    () => getLastSkin(gameId),
+    () => "clasico",
+  );
+  const [chosenSkin, setChosenSkin] = useState<SkinId | null>(null);
+  const skin = chosenSkin ?? storedSkin;
+
   // Engine lifecycle: one instance per mount, destroyed on unmount
   // (also covers React Strict Mode's double mount in development).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const game = createFroggerGame(canvas, {
-      onStats: setStats,
-      onStatus: setStatus,
-      onGameOver: setFinalStats,
-    });
+    const game = createFroggerGame(
+      canvas,
+      {
+        onStats: setStats,
+        onStatus: setStatus,
+        onGameOver: setFinalStats,
+      },
+      { palette: SKINS[getLastSkin(gameId)] },
+    );
     gameRef.current = game;
     game.start();
 
@@ -47,7 +67,13 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
       game.destroy();
       if (gameRef.current === game) gameRef.current = null;
     };
-  }, []);
+    // Skin changes never land here: they go through setSkin below.
+  }, [gameId]);
+
+  // Apply the active skin without recreating the engine.
+  useEffect(() => {
+    gameRef.current?.setSkin(SKINS[skin]);
+  }, [skin]);
 
   // Prevent page scroll with Space and arrows while the game is mounted.
   // keyup is also cancelled so Space does not "click" a focused HUD button.
@@ -87,6 +113,11 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
   const endGame = (e: MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
     finishGame();
+  };
+
+  const changeSkin = (next: SkinId) => {
+    setChosenSkin(next);
+    setLastSkin(gameId, next);
   };
 
   const handleSave = async (name: string) => {
@@ -129,6 +160,7 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
             <div className="v">{String(stats.level).padStart(2, "0")}</div>
           </div>
         </div>
+        <SkinPicker value={skin} onChange={changeSkin} />
         <div className="hud-actions">
           <button
             type="button"
