@@ -58,7 +58,8 @@ export function Nav() {
           Iniciar Sesión
         </Link>
         <button className="btn ghost hamburger" onClick={() => setOpen(true)} aria-label="Menú">
-          ≡
+          <span className="hamburger-glyph" aria-hidden="true">≡</span>
+          <span className="hamburger-lines" aria-hidden="true"></span>
         </button>
       </nav>
 
