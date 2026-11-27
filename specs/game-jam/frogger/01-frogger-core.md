@@ -1,6 +1,6 @@
 # SPEC — Frogger: integración core del juego
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** 13-tabla-scores-unica, 16-integracion-juego-snake
 > **Fecha:** 2026-05-20 (actualizada 2026-11-27 con las decisiones de implementación)
 > **Objetivo:** Integrar Frogger (canvas puro, construido desde cero) como juego jugable en Arcade Vault con ID `frogger`, siguiendo el contrato de integración de juegos del proyecto (motor `engine.ts` + player + página `jugar`), con score, vidas, nivel y game over conectados al HUD de la plataforma.

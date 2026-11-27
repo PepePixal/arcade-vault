@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import GameOverModal from "@/components/games/game-over-modal";
 import PauseOverlay from "@/components/games/pause-overlay";
+import MobileGameControls from "@/components/games/mobile-game-controls";
+import MobileStatsBar from "@/components/games/mobile-stats-bar";
 import SkinPicker from "@/components/games/skin-picker";
 import { createFroggerGame, type FroggerGame, type FroggerStats, type FroggerStatus } from "./engine";
 import { SKINS } from "./skins";
 import { saveScore, setLastPlayerName } from "@/lib/scores";
 import { getLastSkin, setLastSkin, type SkinId } from "@/lib/skins";
+import type { VirtualKey } from "@/components/games/virtual-gamepad";
 
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 560;
+
+// Button A: Frogger only uses 4-direction jumps (arrows), so A stays disabled.
+const ACTION_A: VirtualKey | null = null;
 
 const INITIAL_STATS: FroggerStats = { score: 0, lives: 3, level: 1 };
 
@@ -137,7 +143,7 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
 
   return (
     <>
-      <div className="player-hud">
+      <div className="player-hud max-md:hidden!">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat">
             <div className="l">Jugador</div>
@@ -180,6 +186,8 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
         </div>
       </div>
 
+      <MobileStatsBar score={stats.score} lives={stats.lives} level={stats.level} />
+
       <div className="crt">
         <div className="crt-screen">
           <canvas
@@ -197,6 +205,16 @@ export default function FroggerPlayer({ gameId, title }: FroggerPlayerProps) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+
+      <MobileGameControls
+        actionA={ACTION_A}
+        skin={skin}
+        onSkinChange={changeSkin}
+        isPaused={isPaused}
+        isGameOver={isGameOver}
+        onTogglePause={pauseOrResume}
+        onEnd={finishGame}
+      />
 
       {isGameOver && finalStats && (
         <GameOverModal
