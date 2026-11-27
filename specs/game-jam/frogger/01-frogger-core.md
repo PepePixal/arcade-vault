@@ -1,9 +1,9 @@
 # SPEC — Frogger: integración core del juego
 
 > **Estado:** Aprobado
-> **Depende de:** 06-games-table-leaderboard-supabase
-> **Fecha:** 2026-05-20
-> **Objetivo:** Integrar Frogger (canvas puro, construido desde cero) como juego jugable en Arcade Vault con ID `frogger`, conectando score, vidas, nivel y game over con el HUD React y la play-page dedicada.
+> **Depende de:** 13-tabla-scores-unica, 16-integracion-juego-snake
+> **Fecha:** 2026-05-20 (actualizada 2026-11-27 con las decisiones de implementación)
+> **Objetivo:** Integrar Frogger (canvas puro, construido desde cero) como juego jugable en Arcade Vault con ID `frogger`, siguiendo el contrato de integración de juegos del proyecto (motor `engine.ts` + player + página `jugar`), con score, vidas, nivel y game over conectados al HUD de la plataforma.
 
 ---
 
@@ -11,86 +11,98 @@
 
 **In:**
 
-- INSERT SQL para añadir la fila `frogger` a la tabla `games` en Supabase.
-- Crear `components/games/FroggerGame.tsx` — componente React `"use client"` que encapsula el canvas principal (480 × 640 px). Acepta props: `paused`, `onScoreChange`, `onLivesChange`, `onLevelChange`, `onGameOver`.
-- Game loop construido desde cero en el componente: cuadrícula de 16 columnas × 14 filas de 40 × 40 px. El mapa vertical se divide en tres zonas fijas: zona segura inferior (fila 13 — base de inicio), zona de carretera (filas 12–8, 5 carriles de tráfico), zona de río (filas 7–2, 6 carriles fluviales) y zona de metas (fila 1, 5 bocas destino).
-- Entidades de carretera: coches y camiones de distintas longitudes (1–3 celdas), velocidades y direcciones por carril; se mueven horizontalmente en loop continuo; colisión con la rana es letal.
-- Entidades de río: troncos (longitud 2–4 celdas) y tortugas (grupos de 2–3) por carril; se mueven horizontalmente. La rana sólo sobrevive en el río si está encima de un tronco o tortugas visibles; si cae al agua, muere. Las tortugas pueden sumergirse periódicamente (fase visible → bajo el agua → visible); mientras están bajo el agua no sirven de apoyo.
-- Movimiento de la rana: basado en saltos discretos de 1 celda (40 px) en 4 direcciones (↑ ↓ ← →); cada pulsación desplaza la rana exactamente una celda tras completar una animación de salto de 120 ms. La rana no puede moverse fuera de los bordes laterales.
-- Condición de meta alcanzada: la rana llega a una de las 5 bocas destino de la fila superior (cada boca ocupa 2 columnas de las 16). Una boca ya ocupada no puede volver a usarse en la misma ronda. Al rellenar las 5 bocas se completa la ronda y comienza la siguiente.
-- Condición de muerte: (a) colisión con vehículo, (b) caída al agua, (c) sumergirse la tortuga bajo la rana, (d) salir por los bordes izquierdo/derecho del río, (e) agotar el temporizador de ronda (15 s iniciales reducidos en niveles altos).
-- Sistema de vidas: la rana arranca con 3 vidas. Cada muerte resta 1 vida y llama `onLivesChange(lives - 1)`. Si `lives - 1 === 0` se llama `onLivesChange(0)` y luego `onGameOver(finalScore)`.
-- Puntuación: +10 pts por cada celda avanzada hacia arriba por primera vez en la ronda; +50 pts al ocupar una boca destino; +200 pts al completar una ronda; +bonus de tiempo = `tiempo_restante × 10` al ocupar una boca.
-- Temporizador de ronda visible en HUD: 15 s por defecto, decrementado en rondas altas.
-- HUD interno del canvas (score top-left, vidas como iconos de rana top-right, nivel top-center, barra de tiempo en la fila 0) — patrón doble HUD igual que los demás juegos de la plataforma.
-- Prop `paused: boolean` congela `update()` pero sigue llamando a `draw()`.
-- Limpiar los event listeners (`keydown` en `document`) en el `return` del `useEffect`.
-- Crear `app/games/frogger/play/page.tsx` — play-page específica.
-- Guardar score al terminar: modal React pre-rellena nombre desde `localStorage` (`av_player_name`), inserta en Supabase y persiste el nombre para la próxima partida.
+- Migración `supabase/migrations/<version>_add_game_frogger.sql` que inserta la fila `frogger` en `public.games`.
+- Motor `app/juego/frogger/engine.ts`: factory `createFroggerGame(canvas, callbacks)` que devuelve `start, pause, resume, end, restart, destroy`. Callbacks `onStats`, `onStatus`, `onGameOver`. Sin globals de módulo, sin imports de Supabase ni de `lib/data.ts`. Canvas interno fijo de 640 × 560 px, escalado por CSS.
+- Cuadrícula de 16 columnas × 14 filas de 40 × 40 px (fila 0 = arriba):
+  - fila 0: barra de tiempo + 5 bocas destino,
+  - filas 1–6: río (6 carriles),
+  - fila 7: zona segura intermedia,
+  - filas 8–12: carretera (5 carriles),
+  - fila 13: zona segura de inicio.
+- Entidades de carretera: coches (1 celda) y camiones (2–3 celdas) con velocidad y sentido por carril; loop horizontal continuo; colisión letal.
+- Entidades de río: troncos (2–4 celdas) y grupos de tortugas (2–3) con loop horizontal. La rana solo sobrevive en el río encima de un tronco o de tortugas visibles. Las tortugas se sumergen periódicamente (3 s visibles / 1,5 s sumergidas), con fase independiente por grupo.
+- Movimiento de la rana: saltos discretos de 1 celda con las **flechas** (↑ ↓ ← →), animación de 120 ms. No puede salir por los laterales ni por abajo.
+- Metas: 5 bocas de 2 columnas cada una (columnas 1, 4, 7, 10, 13). Una boca ocupada no puede reutilizarse en la ronda. Al llenar las 5 se completa la ronda.
+- Muerte: (a) vehículo, (b) agua, (c) tortuga que se sumerge bajo la rana, (d) salir por un lateral arrastrada en el río, (e) tiempo agotado, (f) aterrizar en una pared o en una boca ocupada de la fila 0.
+- 3 vidas. Cada muerte resta 1 y se notifica por `onStats`. Con 0 vidas: `onStats` con `lives: 0` y después `onGameOver`.
+- Puntuación: +10 por cada fila nueva alcanzada por la rana actual; +50 por boca ocupada + bonus de `segundos enteros restantes × 10`; +200 al completar la ronda.
+- Temporizador por rana: 15 s en el nivel 1, 1 s menos por nivel, mínimo 8 s.
+- HUD interno del canvas: **solo la barra de tiempo** (10 px, arriba de la fila 0) separada de las bocas por una franja oscura de 8 px. Score, vidas y nivel van únicamente en el HUD externo de la plataforma (JUGADOR, PUNTUACIÓN, VIDAS, NIVEL), como el resto de los juegos.
+- Pausa controlada por la plataforma (`pause()`/`resume()`): congela `update()` pero se sigue dibujando. P / Esc no pausan.
+- Listener `keydown` en `window`, registrado en `start()` y liberado en `destroy()`.
+- Player `app/juego/frogger/frogger-player.tsx` (cliente) y página `app/juego/frogger/jugar/page.tsx` (servidor, `getGame("frogger")` → `notFound()` o player). Ruta: `/juego/frogger/jugar`.
+- Game over con el `GameOverModal` compartido y guardado con `saveScore` de `lib/scores`.
+- Estilos en `app/globals.css`: `.cover-frogger` (portada solo con gradientes CSS) y `.crt-screen .frogger-canvas` (canvas 8:7 a todo el alto de la pantalla CRT 4:3, centrado).
 
 **Fuera de alcance:**
 
-- Sprites bitmap externos — todos los elementos se dibujan con primitivas canvas (rectángulos, arcos, formas compuestas) con colores temáticos; no se carga ninguna imagen.
-- Controles táctiles o mobile.
-- Animaciones de muerte elaboradas (explosiones, partículas) — se cubre en spec secundario.
-- Power-ups especiales (mosca en la boca destino, cocodrilo disfrazado de tronco) — se cubre en spec secundario.
-- Supabase Auth y RLS — `user_id` se almacena como `null`.
+- Sprites bitmap: todo se dibuja con primitivas canvas.
+- Skins y versión móvil: los añaden después `skin-designer` y `mobile-porter` (flujo `/spec-impl-game`).
+- Animaciones de muerte elaboradas.
+- Power-ups (mosca bonus, cocodrilo).
+- Supabase Auth y RLS.
 - Realtime en el leaderboard.
-- Componente genérico `CanvasGame` (YAGNI).
 
 ---
 
 ## Data model
 
-### INSERT en tabla `games`
+### Migración en `public.games`
 
 ```sql
-INSERT INTO games (id, title, short, long, cat, cover, color)
-VALUES (
+insert into public.games (id, title, short_description, long_description, category, cover, color)
+values (
   'frogger',
   'FROGGER',
   'Cruza la carretera y el río sin convertirte en papilla.',
   'Guía a tu rana a través de una carretera repleta de coches y un río de troncos y tortugas flotantes. Llena las cinco bocas del otro lado para completar la ronda; cada nivel acelera el tráfico y acorta el tiempo. Tres vidas y mucho asfalto por delante.',
   'ARCADE',
   'cover-frogger',
-  'lime'
+  'yellow'
 );
 ```
 
-### Props del componente `FroggerGame`
+`color` es `yellow` porque el check de la tabla solo admite `cyan | magenta | green | yellow` (`lime` no es válido).
+
+### Contrato del motor
 
 ```ts
-interface FroggerGameProps {
-  paused: boolean;
-  onScoreChange: (score: number) => void;
-  onLivesChange: (lives: number) => void;
-  onLevelChange: (level: number) => void;
-  onGameOver: (finalScore: number) => void;
+export type FroggerStatus = "playing" | "paused" | "gameover";
+
+export interface FroggerStats {
+  score: number;
+  lives: number; // 3 al empezar, 0 en game over
+  level: number; // >= 1
+}
+
+export interface FroggerCallbacks {
+  onStats: (stats: FroggerStats) => void;      // solo cuando algo cambia
+  onStatus: (status: FroggerStatus) => void;
+  onGameOver: (finalStats: FroggerStats) => void;
 }
 ```
 
-El estado local arranca con `lives = 3`, `score = 0`, `level = 1`.
-`onLivesChange(n)` se dispara cada vez que la rana muere.
-`onLivesChange(0)` se dispara justo antes de `onGameOver(score)` en cualquier condición de fin de partida.
+### Guardado del score
 
-No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y `ScoreRow` de `lib/supabase/types.ts`.
+`saveScore({ gameId: "frogger", name, score, level })` sobre la tabla única `scores`. No se envía `user_id`; `level` es obligatorio (`level >= 1`).
+
+No se crean tablas nuevas.
 
 ---
 
 ## Implementation plan
 
-1. **INSERT en Supabase** — ejecutar el SQL del data model en el SQL Editor de Supabase.
-   Verificación: la fila `frogger` aparece en el Table Editor; `/games` muestra la card con cover `cover-frogger` y color `lime`.
+1. **Migración** — crear y aplicar (con confirmación del usuario) la migración del data model; correr los advisors.
+   Verificación: la fila `frogger` existe; la card aparece en `/juego`.
 
-2. **Definir constantes y tipos** dentro de `FroggerGame.tsx`:
+2. **Constantes y tipos** en `engine.ts`: contrato público (arriba) y constantes:
 
    ```ts
    const COLS = 16;
    const ROWS = 14;
-   const CELL = 40; // px
-   const CANVAS_W = COLS * CELL; // 640 — se escala con CSS al contenedor
+   const CELL = 40;
+   const CANVAS_W = COLS * CELL; // 640
    const CANVAS_H = ROWS * CELL; // 560
-   // Zonas (índice de fila, 0 = arriba)
    const ROW_GOALS = 0;
    const ROW_RIVER_TOP = 1;
    const ROW_RIVER_BOT = 6;
@@ -100,154 +112,90 @@ No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y
    const ROW_START = 13;
    ```
 
-   Tipos locales (no exportados):
+   Tipos locales `Direction`, `Lane`, `Entity` (con `diveT?: number` para el ciclo de inmersión de cada grupo de tortugas) y `Frog`.
 
-   ```ts
-   type Direction = 'up' | 'down' | 'left' | 'right';
-   interface Lane {
-     row: number;
-     speed: number;
-     dir: 1 | -1;
-     entities: Entity[];
-   }
-   interface Entity {
-     col: number;
-     width: number;
-     type: 'car' | 'truck' | 'log' | 'turtle';
-     submerged?: boolean;
-   }
-   interface Frog {
-     col: number;
-     row: number;
-     animating: boolean;
-     animT: number;
-     targetCol: number;
-     targetRow: number;
-   }
-   ```
+3. **`buildLanes(level)`** — tablas `RIVER_LANES` y `ROAD_LANES` con fila, tipo, ancho, cantidad, velocidad base (px/frame a 60 fps) y sentido. Río 1–3 px/frame, carretera 1,5–4 px/frame, sentidos alternos. Las entidades se reparten a lo largo de `COLS + ancho` para mantener los huecos constantes al dar la vuelta. Velocidad por nivel: `speed × 1.15^(level − 1)` (compuesto).
+   Verificación: cada carril tiene ≥ 2 entidades y huecos ≥ 1 celda.
 
-3. **Construir el mapa de carriles** — función `buildLanes(level: number): Lane[]`:
-   - Carriles de carretera (filas 8–12): velocidades entre 1.5 y 4 px/frame (escaladas por nivel); sentidos alternos; entidades precargadas con huecos para que sean atravesables.
-   - Carriles de río (filas 1–6): velocidades entre 1 y 3 px/frame; troncos de 2–4 celdas con huecos de al menos 1 celda; grupos de tortugas de 2–3 con ciclo de inmersión de 3 s visible / 1.5 s bajo el agua.
-   - Cada nivel incrementa todas las velocidades en un 15 %.
-     Verificación: al imprimir el array `lanes` en consola, cada carril tiene al menos 2 entidades y los huecos son visibles.
+4. **Game loop** con `requestAnimationFrame`:
+   - `update(dt)`: no hace nada fuera de `playing`. Mueve entidades con `col += speed × dir × (dt / 16) / CELL` (la velocidad está en px y `col` en celdas). Al salir por un lado se resta/suma `COLS + width`. Avanza el ciclo de las tortugas. Gestiona el salto (120 ms) y al aterrizar llama a `resolveLanding()`. Arrastra a la rana con su soporte en el río. Descuenta el temporizador. Emite `onStats` si algo cambió.
+   - `draw()`: fondo por zonas, entidades, rana (elipse con ojos, rotada según la dirección, patas extendidas al saltar), bocas (verde oscuro con borde dorado, rana dentro si están ocupadas) y la barra de tiempo (azul `#1f5fe0` → amarillo → rojo sobre franja oscura `#0a0a14`).
 
-4. **Game loop principal** con `requestAnimationFrame`:
-   - `update(dt: number)`:
-     - Si `paused`, saltar toda lógica.
-     - Avanzar posición de cada entidad en su carril (`entity.col += lane.speed * lane.dir * dt / 16`); cuando una entidad sale del borde, se reintroduce por el lado opuesto (`col = -entity.width` o `col = COLS`).
-     - Si la rana no está animando: comprobar input (`pendingDir`); si hay dirección pendiente, iniciar animación (`animating = true`, `animT = 0`, calcular `targetCol/targetRow`).
-     - Si la rana está animando: avanzar `animT += dt`; si `animT >= 120`, completar salto (`col = targetCol`, `row = targetRow`, `animating = false`), resolver lógica de celda destino (detección de muerte/meta/puntuación).
-     - Si la rana está en el río y no animando: aplicar el desplazamiento horizontal de la entidad sobre la que descansa (se verifica con `getSupport(frog, lanes)`).
-     - Decrementar temporizador de ronda; si llega a 0, muerte por tiempo.
-     - Llamar callbacks de cambio de estado si el valor difiere del anterior.
+5. **Colisiones y metas** (usando el centro de la rana, `col + 0.5`):
+   - `checkRoadCollision(frog, lanes)`.
+   - `getSupport(frog, lanes)`: `null` si no hay entidad o si la tortuga está sumergida.
+   - `checkGoal(frog, goals)`: marca la boca libre y suma puntos; pared o boca ocupada = muerte.
+   - Muertes con la rana quieta (vehículo, inmersión, salir por un lateral) se comprueban en cada frame.
+   - Tras ocupar una boca (sin completar la ronda): la rana vuelve al inicio con el temporizador reiniciado y vuelve a puntuar +10 por fila.
 
-   - `draw()`:
-     - Fondo por zonas: negro para carretera, azul oscuro para río, verde oscuro para filas seguras, verde claro para bocas destino.
-     - Dibujar entidades de cada carril: coches (rectángulo rojo/amarillo/azul con ruedas circulares), camiones (rectángulo gris con cabina diferenciada), troncos (rectángulo marrón con textura de líneas), tortugas visibles (círculo verde con patrón de escamas), tortugas sumergidas (contorno semitransparente).
-     - Dibujar rana: cuerpo verde brillante (elipse 28×24 px) con ojos blancos/negros (dos círculos), patas extendidas durante animación de salto.
-     - Dibujar bocas destino: rectángulo de meta verde oscuro con borde dorado; si ocupada, dibujar silueta de rana dentro.
-     - HUD interno: score top-left (fuente blanca 16 px), nivel top-center, iconos de rana top-right (un círculo verde por vida), barra de tiempo (rectángulo en fila 0, anchura proporcional al tiempo restante, color verde → amarillo → rojo).
+6. **`completeRound()`** — +200, vacía las bocas, `level += 1`, `buildLanes(level)` y rana nueva con el temporizador del nuevo nivel. El cambio de nivel llega al HUD por `onStats`.
 
-5. **Detección de colisiones y soporte**:
-   - `checkRoadCollision(frog, lanes)`: itera entidades de carriles de carretera; si `frog.col` está dentro del rango `[entity.col, entity.col + entity.width)` y `frog.row === lane.row`, devuelve `true`.
-   - `getSupport(frog, lanes)`: itera entidades de carriles de río; devuelve la entidad cuyo rango cubre la columna de la rana en el mismo carril, o `null`. Si la entidad es una tortuga con `submerged === true`, devuelve `null` (sin soporte).
-   - `checkGoal(frog, goals)`: si `frog.row === ROW_GOALS`, calcula la boca que corresponde a `frog.col`; si no está ocupada, la marca y suma puntos; si ya estaba ocupada o `frog.col` no es una boca, es muerte.
+7. **`killFrog()`** — no hace nada si la partida ya terminó. Resta una vida; con vidas restantes emite stats y resetea la rana; con 0 llama a `gameOver()` (emite `lives: 0`, luego `onGameOver`) y el loop se detiene.
 
-6. **Gestión de ronda completada** — `completeRound()`:
-   - Resetea la posición de la rana a `ROW_START`, columna central.
-   - Vacía las bocas ocupadas.
-   - Incrementa `level`, llama `onLevelChange(level)`.
-   - Reconstruye los carriles con `buildLanes(level)`.
-   - Resetea el temporizador.
+8. **Player, página y estilos**:
+   - `jugar/page.tsx`: `getGame("frogger")` + `notFound()`.
+   - `frogger-player.tsx`: crea el motor en un `useEffect` (nunca corre en servidor; no se usa `dynamic(..., { ssr: false })`), HUD de la plataforma con PAUSA/REANUDAR, FIN y SALIR, funciones `pauseOrResume` / `finishGame` sin evento, `GameOverModal` + `saveScore` + `setLastPlayerName`, "Jugar de nuevo" llama a `restart()`.
+   - `globals.css`: `.cover-frogger` y `.crt-screen .frogger-canvas`.
+   Verificación: el HUD refleja score, vidas y nivel en tiempo real.
 
-7. **Gestión de muerte** — `killFrog()`:
-   - Decrementa `lives`.
-   - Llama `onLivesChange(lives)`.
-   - Si `lives === 0`: llama `onLivesChange(0)`, luego `onGameOver(score)`, detiene el loop.
-   - Si `lives > 0`: resetea la posición de la rana a `ROW_START`, columna central; resetea temporizador.
-
-8. **Crear `app/games/frogger/play/page.tsx`** — play-page específica:
-   - Importa `FroggerGame` con `dynamic(..., { ssr: false })`.
-   - Estado local: `score`, `lives` (inicial `3`), `level`, `paused`, `over`, `name`, `saved`, `gameKey`.
-   - Pasa `paused` y los cuatro callbacks a `FroggerGame`.
-   - Reutiliza el layout visual de la plataforma (HUD React + CRT + modal game over), igual que las play-pages de Asteroids, Tetris, Arkanoid, Snake y Space Invaders.
-   - Modal game over: pre-rellena nombre desde `localStorage.getItem('av_player_name')`; al confirmar, guarda en `localStorage` e inserta en Supabase `{ game_id: 'frogger', player_name: name, score, user_id: null }`.
-   - Botón de guardar se deshabilita tras el primer envío.
-   - Botón "JUGAR DE NUEVO" incrementa `gameKey` para remontar `FroggerGame`.
-     Verificación: el HUD React refleja score, vidas y nivel en tiempo real.
-
-9. **Verificación final** — `npm run build` termina sin errores de TypeScript. Ninguna ruta existente devuelve 500.
+9. **Verificación final** — `npm run lint`, `npx tsc --noEmit` y `npm run build` sin errores; ninguna ruta existente devuelve 500.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] La fila `frogger` existe en la tabla `games` de Supabase con los valores del data model.
-- [ ] La card de Frogger aparece en `/games` con cover `cover-frogger` y color `lime`.
-- [ ] La ruta `/games/frogger/play` carga sin errores de SSR ni de TypeScript.
-- [ ] El canvas (640 × 560) se renderiza con las tres zonas visualmente diferenciadas (carretera, río, zonas seguras, bocas destino).
-- [ ] La rana aparece centrada en la fila de inicio al cargar la partida.
-- [ ] La rana salta exactamente una celda (40 px) por pulsación de tecla de dirección con animación de 120 ms.
-- [ ] La rana no puede salir por los bordes laterales.
-- [ ] Los coches y camiones se mueven horizontalmente en loop por sus carriles; se reintroducen por el lado opuesto al salir.
-- [ ] Los troncos y tortugas se mueven horizontalmente en loop por sus carriles.
-- [ ] Las tortugas alternan entre visible y sumergida con el ciclo definido.
-- [ ] La rana muere al ser alcanzada por un vehículo de carretera.
-- [ ] La rana muere al caer al agua (no estar sobre tronco ni tortugas visibles).
-- [ ] La rana muere cuando la tortuga que la soporta se sumerge.
-- [ ] La rana muere al agotar el temporizador de ronda.
-- [ ] Al morir, `onLivesChange(lives - 1)` se dispara; la rana vuelve a la fila de inicio.
-- [ ] Al llegar a una boca libre, la boca queda marcada y se suma el bonus de puntuación.
-- [ ] Al llegar a una boca ya ocupada, la rana muere.
-- [ ] Al completar las 5 bocas, la ronda termina y comienza la siguiente con `level` incrementado.
-- [ ] `onLevelChange(level)` se dispara al iniciar cada nueva ronda.
-- [ ] La velocidad de entidades aumenta con cada nivel.
-- [ ] El temporizador de ronda disminuye con cada nivel.
-- [ ] `onScoreChange(score)` se dispara en cada cambio de puntuación.
-- [ ] El HUD interno del canvas (score, nivel, vidas-iconos, barra de tiempo) se dibuja correctamente.
-- [ ] El HUD React de la plataforma refleja en tiempo real score, vidas y nivel.
-- [ ] El botón "PAUSA" de la plataforma congela el game loop; "REANUDAR" lo reanuda.
-- [ ] Las teclas P / Esc no provocan una pausa independiente del canvas.
-- [ ] Al llegar a `lives = 0`, `onLivesChange(0)` y `onGameOver(score)` se disparan; aparece el modal React.
-- [ ] El modal pre-rellena el nombre desde `av_player_name` si existe en localStorage.
-- [ ] Al confirmar el nombre, el score se inserta en Supabase y el nombre se persiste en localStorage.
-- [ ] El botón de guardar se deshabilita tras el primer envío (sin doble inserción).
-- [ ] El botón "JUGAR DE NUEVO" reinicia la partida desde cero (nuevo `gameKey`).
-- [ ] El score guardado aparece en `/games/frogger` y en `/hall-of-fame` al recargar.
-- [ ] `npm run build` completa sin errores de TypeScript.
+- [ ] La fila `frogger` existe en `games` con los valores del data model (`color = 'yellow'`).
+- [ ] La card de Frogger aparece en `/juego` con la portada `cover-frogger`.
+- [ ] `/juego/frogger/jugar` carga sin errores.
+- [ ] El canvas (640 × 560) muestra las zonas diferenciadas (metas, río, zonas seguras, carretera).
+- [ ] La rana aparece centrada en la fila de inicio.
+- [ ] La rana salta una celda por pulsación de flecha con animación de 120 ms.
+- [ ] La rana no puede salir por los laterales ni por abajo.
+- [ ] Coches y camiones se mueven en loop por sus carriles.
+- [ ] Troncos y tortugas se mueven en loop por sus carriles.
+- [ ] Las tortugas alternan entre visibles y sumergidas.
+- [ ] La rana muere al ser alcanzada por un vehículo.
+- [ ] La rana muere al caer al agua.
+- [ ] La rana muere cuando su tortuga se sumerge.
+- [ ] La rana muere al salir por un lateral arrastrada en el río.
+- [ ] La rana muere al agotar el temporizador.
+- [ ] La rana muere al aterrizar en una pared o en una boca ocupada.
+- [ ] Al morir se resta una vida en el HUD y la rana vuelve al inicio.
+- [ ] Al llegar a una boca libre, la boca queda marcada, se suma +50 + bonus de tiempo y sale una rana nueva con el tiempo completo.
+- [ ] Al completar las 5 bocas se suma +200 y empieza la siguiente ronda con el nivel incrementado.
+- [ ] La velocidad de las entidades aumenta con cada nivel.
+- [ ] El temporizador disminuye con cada nivel (mínimo 8 s).
+- [ ] El canvas solo muestra la barra de tiempo como HUD interno, separada de las bocas por una franja oscura.
+- [ ] El HUD de la plataforma refleja en tiempo real puntuación, vidas y nivel.
+- [ ] PAUSA congela el juego y REANUDAR lo reanuda; P / Esc no pausan.
+- [ ] Con 0 vidas aparece el `GameOverModal`.
+- [ ] El modal pre-rellena el último nombre usado.
+- [ ] Al guardar, el score (con `level`) se inserta en `scores` y el nombre se recuerda.
+- [ ] El botón de guardar no permite doble inserción.
+- [ ] "Jugar de nuevo" reinicia la partida desde cero.
+- [ ] El score guardado aparece en `/juego/frogger` y en `/salon-de-la-fama`.
+- [ ] `npm run lint`, `npx tsc --noEmit` y `npm run build` pasan sin errores.
 - [ ] Ninguna ruta existente devuelve 500.
 
 ---
 
 ## Decisions
 
-- **Sí: Primitivas canvas sin sprites bitmap** — coches, camiones, troncos, tortugas y rana se dibujan con formas geométricas canvas y colores temáticos. Razón: no existen assets de Frogger en el repositorio; dibujar por código elimina dependencias de carga de imágenes y permite ajustar visual sin archivos externos.
-
-- **Sí: Cuadrícula discreta de 40 px con animación de salto de 120 ms** — el movimiento de la rana es celda a celda, no continuo. Razón: mecánica canónica de Frogger; el movimiento discreto simplifica enormemente la detección de colisiones y el soporte en el río al comparar filas/columnas enteras.
-
-- **Sí: Doble HUD** — el canvas conserva su HUD interno y React muestra los mismos valores en el HUD de la plataforma. Razón: coherencia con el patrón establecido en todos los juegos de la plataforma.
-
-- **Sí: 3 vidas** — Frogger original arranca con 3 vidas. `onLivesChange` notifica cada pérdida. Razón: fiel a la mecánica clásica; coherente con Arkanoid y Space Invaders.
-
-- **Sí: Tortugas con ciclo de inmersión** — alternan entre soporte y peligro con temporizador independiente por grupo. Razón: mecánica diferenciadora de Frogger respecto a un río de sólo troncos; añade gestión de riesgo sin complejidad de implementación excesiva.
-
-- **Sí: Temporizador de ronda** — 15 s iniciales, decrementados en niveles altos. La muerte por tiempo añade urgencia. Razón: mecánica original de Frogger; impide que el jugador espere indefinidamente en la zona segura.
-
-- **Sí: 5 bocas destino** — requieren llenarse todas para completar la ronda. Razón: mecánica original que da estructura de objetivo claro por ronda sin ser un nivel único lineal.
-
-- **Sí: Canvas 640 × 560 px (16 × 14 celdas de 40 px)** — relación de aspecto vertical cercana a la original. Razón: el mapa de Frogger es vertical (el jugador avanza hacia arriba); un canvas más ancho que alto no representaría bien el recorrido.
-
-- **Sí: Play-page específica `app/games/frogger/play/page.tsx`** — en lugar de la ruta genérica `[id]/play`. Razón: coherencia con todos los juegos anteriores; Next.js App Router da prioridad a rutas estáticas sobre dinámicas.
-
-- **Sí: `dynamic(..., { ssr: false })`** — el componente canvas se carga solo en cliente. Razón: `canvas` y `requestAnimationFrame` no existen en el entorno Node.js de Next.js SSR.
-
-- **No: Movimiento continuo (interpolado)** — la rana no se desliza; salta de celda en celda. Razón: la interpolación continua requeriría colisiones AABB en espacio continuo para el río y la carretera, aumentando la complejidad sin añadir diversión.
-
-- **No: Cocodrilo disfrazado de tronco ni mosca bonus en bocas** — se cubren en el spec secundario de power-ups y eventos. Razón: son capas de dificultad y recompensa independientes de la mecánica base.
-
-- **No: Componente genérico `CanvasGame`** — cada juego tiene su componente propio. Razón: YAGNI.
-
-- **No: RLS en este spec** — las tablas quedan abiertas (INSERT y SELECT públicos). Razón: se mitiga en el spec futuro de seguridad.
-
-- **No: Realtime en leaderboards** — los scores se ven al recargar. Razón: la complejidad de subscriptions no aporta valor mientras haya pocos jugadores activos.
+- **Sí: Contrato de integración del proyecto** (`engine.ts` + `frogger-player.tsx` + `jugar/page.tsx`) en lugar de un componente React con props en `components/games/`. Razón: coherencia con los demás juegos y requisito de `skin-designer` y `mobile-porter`.
+- **Sí: Ruta `/juego/frogger/jugar`**, no `/games/frogger/play`. Razón: las rutas del proyecto están en español bajo `/juego`.
+- **No: `dynamic(..., { ssr: false })`**. Razón: el motor se crea dentro de un `useEffect`, así que nunca corre en el servidor.
+- **Sí: `GameOverModal` y `saveScore` compartidos**, sin modal propio. Razón: reutilización y consistencia.
+- **Sí: Guardar `level`, no `user_id: null`**. Razón: la tabla `scores` exige `level >= 1`; `user_id` queda fuera hasta que haya auth.
+- **Sí: Migración en `supabase/migrations/`**, no SQL Editor. Razón: convención del proyecto; aplicarla requiere confirmación del usuario.
+- **Sí: `color = 'yellow'`**. Razón: `lime` no pasa el check de `games.color`.
+- **Sí: Solo barra de tiempo en el HUD interno**. Razón: la fila 0 no tiene espacio para HUD y bocas; score, vidas y nivel ya están en el HUD externo como en el resto de juegos.
+- **Sí: Barra de 10 px azul `#1f5fe0` → amarillo → rojo, con 8 px de franja oscura antes de las bocas**. Razón: el verde se confundía con el fondo de las bocas.
+- **Sí: Cada rana nueva reinicia tiempo y puntuación por fila** (tras boca o muerte). Razón: llenar 5 bocas en 15 s es inviable; fiel al Frogger clásico.
+- **Sí: Temporizador 15 s − 1 s por nivel, mínimo 8 s**.
+- **Sí: Velocidad en px/frame convertida a celdas** (`/ CELL`). Razón: la fórmula original sumaba píxeles a una coordenada en celdas.
+- **Sí: +15 % de velocidad compuesto por nivel**.
+- **Sí: Colisión y soporte con el centro de la rana**. Razón: simétrico en ambos sentidos de tráfico.
+- **Sí: Canvas 640 × 560** con río en filas 1–6 (se descartan los valores 480 × 640 y filas 7–2 de la versión anterior).
+- **Sí: Portada `.cover-frogger` con gradientes CSS**. Razón: la migración la referencia y el resto del catálogo usa portadas CSS.
+- **Sí: Primitivas canvas sin sprites; solo flechas como controles de teclado**.
+- **No: Power-ups, RLS, realtime, componente genérico `CanvasGame`**.

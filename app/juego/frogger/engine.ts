@@ -158,7 +158,8 @@ const MAX_FRAME_MS = 50; // clamps dt after tab switches
 
 const ROUND_TIME_START_S = 15;
 const ROUND_TIME_MIN_S = 8;
-const TIME_BAR_H = 6; // px, drawn at the top of the goals row
+const TIME_BAR_H = 10; // px, drawn at the top of the goals row
+const TIME_BAR_GAP = 8; // px between the time bar and the goal mouths
 
 /** Round timer: 15 s at level 1, one second less per level, never below 8 s. */
 function roundTimeMs(level: number): number {
@@ -201,10 +202,10 @@ const COLORS = {
   frogDark: "#2f8f1f",
   eyeWhite: "#ffffff",
   eyePupil: "#000000",
-  timeHigh: "#3ddc4a",
+  timeHigh: "#1f5fe0",
   timeMid: "#f2c230",
   timeLow: "#e5322d",
-  timeTrack: "#0d2a10",
+  timeTrack: "#0a0a14",
 };
 
 // ---------------------------------------------------------------------------
@@ -493,8 +494,8 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
   }
 
   function drawGoals(): void {
-    const top = ROW_GOALS * CELL + TIME_BAR_H + 2;
-    const h = CELL - TIME_BAR_H - 4;
+    const top = ROW_GOALS * CELL + TIME_BAR_H + TIME_BAR_GAP;
+    const h = CELL - TIME_BAR_H - TIME_BAR_GAP - 2;
     GOAL_COLS.forEach((col, i) => {
       const x = col * CELL + 3;
       const w = GOAL_WIDTH * CELL - 6;
@@ -653,7 +654,8 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: FroggerC
   function drawTimeBar(): void {
     const ratio = Math.max(0, timeLeft / roundTimeMs(level));
     g.fillStyle = COLORS.timeTrack;
-    g.fillRect(0, ROW_GOALS * CELL, CANVAS_W, TIME_BAR_H);
+    // The track also covers the gap under the bar, so it reads as one dark strip.
+    g.fillRect(0, ROW_GOALS * CELL, CANVAS_W, TIME_BAR_H + TIME_BAR_GAP);
     g.fillStyle = ratio > 0.5 ? COLORS.timeHigh : ratio > 0.25 ? COLORS.timeMid : COLORS.timeLow;
     g.fillRect(0, ROW_GOALS * CELL, CANVAS_W * ratio, TIME_BAR_H);
   }
